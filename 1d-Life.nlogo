@@ -134,21 +134,6 @@ to cell-death  ;; mostly the same.
     [ set pcolor bgcolor ] ;; Regular color for 2D cells
 end
 
-to go
-  ;; Process the next step in the 1D representation
-  process-1d-step
-  
-  ;; Update the 1D display row
-  update-1d-display
-  
-  ;; Periodically update the 2D display (every grid-size^2 steps)
-  if ticks mod (grid-size * grid-size) = 0 and ticks > 0 [
-    update-2d-from-1d
-  ]
-  
-  tick
-end
-
 to process-1d-step
   ;; This is where we implement the 1D version of Conway's Game of Life
   ;; from the notebook, idea.ipynb!
@@ -291,6 +276,46 @@ to update-1d-state-from-2d-patch [p]  ;; No idea how this will perform.
   ]
 end
 
+to dump-current-frame
+  ;; Get the current frame from the 1D state by dividing by grid-size * grid-size
+  ;; We are getting called (hopefully) at the end of a frame only.
+  ;; But, we can still check which frame we are currently working on.
+
+  let current-frame-number ticks / (grid-size * grid-size)   ;; check for off-by-one
+
+  ;; Okay. We know what the current frame number is. Now we can build a frame string
+  ;; by just subtracting current-frame-number * grid-size * grid-size positions from the beginning of the one-d-state an
+  ;; copying that result to current-frame. Current-frame might be any length but it should at least be current!
+
+  let current-frame sublist one-d-state (current-frame-number * grid-size * grid-size) (current-frame-number * grid-size * grid-size + grid-size * grid-size)
+
+  let frame-string ""
+  foreach current-frame [ cell ->
+    ifelse cell = 1
+      [ set frame-string (word frame-string "█") ]  ;; Full block for live cells
+      [ set frame-string (word frame-string "·") ]  ;; Middle dot for dead cells
+  ]
+
+  ;; Print the frame number and the 1D representation
+  output-print (word "Frame " (current-frame-number) ": " frame-string)
+end
+
+to go
+  ;; Process the next step in the 1D representation
+  process-1d-step
+  
+  ;; Update the 1D display row
+  update-1d-display
+  
+  ;; Periodically update the 2D display (every grid-size^2 steps)
+  if ticks mod (grid-size * grid-size) = 0 and ticks > 0 [
+    update-2d-from-1d
+
+    dump-current-frame
+  ]
+  
+  tick
+end
 
 ; 1998!! This model is literally a millenial.
 
