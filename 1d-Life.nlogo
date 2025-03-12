@@ -1,3 +1,17 @@
+;; I've wound up rather re-writing the model due to the 2D -> 1D -> 2D processing.
+
+
+;; a. any initialization -> setup-world-regions -> 
+;;    convert 2D patches to 1D state -> handle 1D state patches (update and scroll)
+
+;; b. tick -> update 1D state (use GOL 1D rules) -> handle 1D state patches (update and scroll)
+
+;; c. tick (if tick number mod grid**2 = 0) -> update 1D state -> handle 1D state patches (update and scroll)
+;;    update 2D patches from 1D state -> dump state text -> optional: trim state
+
+
+;;;; HOUSEKEEPING
+
 globals [
   erasing?        ;; PDD: Leave as is?
   grid-size       ;; how to make this work with GRAPHICS-WINDOW?
@@ -10,6 +24,9 @@ patches-own [
   live-neighbors  ;; PDD: Awwwww, shucks, we have to break this.
   is-1d-cell      ;; PDD: Is this patch part of the 1d grid?
 ]
+
+
+;;;; INITIALIZERS
 
 to setup-blank
   clear-all
@@ -39,32 +56,6 @@ to setup-blank
   reset-ticks
 end
 
-to setup-world-regions
-  ;; define the 1d world region.
-  ask patches [
-    ifelse pycor < -50  ;; Bottom row for 1D display
-      [ set is-1d-cell true ]  ;; Changed from is-1d-display? to is-1d-cell
-      [ set is-1d-cell false ]
-  ]
-  ;; Draw a dividing line
-  ask patches with [pycor = -50] [
-    set pcolor white
-  ]
-end
-
-to initialize-1d-state
-  ;; Create the initial 1D state based on the 2D grid
-  set one-d-state []
-  set current-pos 0
-  ;; Initialize with zeros or based on the current 2D state
-  repeat (grid-size * grid-size) [
-    set one-d-state lput 0 one-d-state
-  ]
-end
-
-to initialize-2d-state
-  ;; PDD: I guess we could read this back into the 1d state?
-end
 
 to setup-random
   ;; PDD: Okay, we can do this, but what we need to do is set up the 2d state, draw it,
@@ -101,40 +92,63 @@ to setup-random
   reset-ticks
 end
 
-to copy-2d-state-to-1d
-  set one-d-state []
-
-  let y-range (range -50 51)
-  let x-range (range -50 51)
-  
-  foreach y-range [ y ->
-    foreach x-range [ x ->
-      ;; Skip the 1D display row
-      if y > -51 [
-        let p patch x y
-        ifelse [living?] of p
-          [ set one-d-state lput 1 one-d-state ]
-          [ set one-d-state lput 0 one-d-state ]
+to draw-cells  ;; From the old model, actually an input-setup function.
+  ifelse mouse-down? [
+    let p patch mouse-xcor mouse-ycor
+    if [not is-1d-cell] of p [  ;; Only operate on 2D cells!!
+      if erasing? = 0 [
+        set erasing? [living?] of p
       ]
+      ask p [
+        ifelse erasing? [
+          cell-death
+        ] [
+          cell-birth
+        ]
+      ]
+      
+      ;; Important: update the corresponding position in the 1D state
+      update-1d-state-from-2d-patch p
     ]
+    display
+  ] [
+    set erasing? 0
   ]
 end
 
-to cell-birth  ;; mostly the same.
-  set living? true
-  ifelse is-1d-cell
-    [ set pcolor green ]  ;; Green for 1D cells (terminal style)
-    [ set pcolor fgcolor ] ;; Regular color for 2D cells
+to setup-world-regions
+  ;; define the 1d world region.
+  ask patches [
+    ifelse pycor < -50  ;; Bottom row for 1D display
+      [ set is-1d-cell true ]  ;; Changed from is-1d-display? to is-1d-cell
+      [ set is-1d-cell false ]
+  ]
+  ;; Draw a dividing line
+  ask patches with [pycor = -50] [
+    set pcolor white
+  ]
 end
 
-to cell-death  ;; mostly the same.
-  set living? false
-  ifelse is-1d-cell
-    [ set pcolor black ]  ;; Black for 1D cells (terminal style)
-    [ set pcolor bgcolor ] ;; Regular color for 2D cells
+to initialize-1d-state
+  ;; Create the initial 1D state based on the 2D grid
+  set one-d-state []
+  set current-pos 0
+  ;; Initialize with zeros or based on the current 2D state
+  repeat (grid-size * grid-size) [
+    set one-d-state lput 0 one-d-state
+  ]
 end
 
-to process-1d-step
+
+;;;; PROCEDURES
+
+to gol-1d
+  ;; with a 1D state array (implemented here as a list) 
+  ;;   and the current position 
+  ;;   and the state at the current position (old-self):
+  ;; find the apppropriate "neighbors" using a temporal shift (modulo arithmetic)
+  ;; Game of Life rules algebra stays the same in 1D and 2D.
+
   ;; This is where we implement the 1D version of Conway's Game of Life
   ;; from the notebook, idea.ipynb!
   
@@ -171,6 +185,49 @@ to process-1d-step
     [ set new-state 1 ]
     [ set new-state 0 ]
   
+
+
+
+
+
+
+
+
+to copy-2d-state-to-1d
+  set one-d-state []
+
+  let y-range (range -50 51)
+  let x-range (range -50 51)
+  
+  foreach y-range [ y ->
+    foreach x-range [ x ->
+      ;; Skip the 1D display row
+      if y > -51 [
+        let p patch x y
+        ifelse [living?] of p
+          [ set one-d-state lput 1 one-d-state ]
+          [ set one-d-state lput 0 one-d-state ]
+      ]
+    ]
+  ]
+end
+
+to cell-birth  ;; mostly the same.
+  set living? true
+  ifelse is-1d-cell
+    [ set pcolor green ]  ;; Green for 1D cells (terminal style)
+    [ set pcolor fgcolor ] ;; Regular color for 2D cells
+end
+
+to cell-death  ;; mostly the same.
+  set living? false
+  ifelse is-1d-cell
+    [ set pcolor black ]  ;; Black for 1D cells (terminal style)
+    [ set pcolor bgcolor ] ;; Regular color for 2D cells
+end
+
+to process-1d-step
+ 
   ;; Add the new state to our 1D representation
   set one-d-state lput new-state one-d-state
   
@@ -230,29 +287,7 @@ to update-2d-from-1d
   ]
 end
 
-to draw-cells  ;; From the old model, actually an input function.
-  ifelse mouse-down? [
-    let p patch mouse-xcor mouse-ycor
-    if [not is-1d-cell] of p [  ;; Only operate on 2D cells!!
-      if erasing? = 0 [
-        set erasing? [living?] of p
-      ]
-      ask p [
-        ifelse erasing? [
-          cell-death
-        ] [
-          cell-birth
-        ]
-      ]
-      
-      ;; Important: update the corresponding position in the 1D state
-      update-1d-state-from-2d-patch p
-    ]
-    display
-  ] [
-    set erasing? 0
-  ]
-end
+
 
 to update-1d-state-from-2d-patch [p]  ;; No idea how this will perform.
   ;; Calculate the position in the 1D state that corresponds to this patch
