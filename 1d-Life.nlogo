@@ -26,22 +26,25 @@ to setup-blank
   
   ;; Initialize the 1D state with all zeros
   set one-d-state []
-  repeat (grid-size * grid-size) [
+  
+  ;; Fill with enough zeros to have history for the first calculations
+  ;; We need grid-size^2 zeros for the initial state, plus enough for the first calculation
+  repeat (grid-size * grid-size) + (grid-size * 2 + 3) [
     set one-d-state lput 0 one-d-state
   ]
   
   ;; Set the current position to the beginning
-  set current-pos 0
+  set current-pos (grid-size * grid-size)
   
   reset-ticks
 end
 
 to setup-world-regions
   ;; define the 1d world region.
-    ask patches [
+  ask patches [
     ifelse pycor < -50  ;; Bottom row for 1D display
-      [ set is-1d-display? true ]
-      [ set is-1d-display? false ]
+      [ set is-1d-cell true ]  ;; Changed from is-1d-display? to is-1d-cell
+      [ set is-1d-cell false ]
   ]
   ;; Draw a dividing line
   ask patches with [pycor = -50] [
@@ -84,10 +87,17 @@ to setup-random
 
   ;; okay, now we need to copy that back into 1d. 
   copy-2d-state-to-1d
-
-  ;; set position, but still need to TODO scroll.
-  set current-pos 0
-
+  
+  ;; Add padding for history
+  let padding []
+  repeat (grid-size * 2 + 3) [
+    set padding lput 0 padding
+  ]
+  set one-d-state (sentence padding one-d-state)
+  
+  ;; Set position to beginning of meaningful part
+  set current-pos (grid-size * grid-size)
+  
   reset-ticks
 end
 
@@ -197,6 +207,12 @@ to update-1d-display
         ifelse cell-state = 1
           [ set pcolor green ]
           [ set pcolor black ]
+        
+        ;; Add a visual indicator for frame boundaries
+        if pos mod (grid-size * grid-size) = 0 [
+          ;; Mark the beginning of a new frame with a different color
+          set pcolor yellow
+        ]
       ]
     ]
     set i i + 1
@@ -229,7 +245,7 @@ to update-2d-from-1d
   ]
 end
 
-to draw-cells  ;; From the old model; the name is confusing. This is an input function.
+to draw-cells  ;; From the old model, actually an input function.
   ifelse mouse-down? [
     let p patch mouse-xcor mouse-ycor
     if [not is-1d-cell] of p [  ;; Only operate on 2D cells!!
@@ -243,6 +259,9 @@ to draw-cells  ;; From the old model; the name is confusing. This is an input fu
           cell-birth
         ]
       ]
+      
+      ;; Important: update the corresponding position in the 1D state
+      update-1d-state-from-2d-patch p
     ]
     display
   ] [
@@ -250,6 +269,27 @@ to draw-cells  ;; From the old model; the name is confusing. This is an input fu
   ]
 end
 
+to update-1d-state-from-2d-patch [p]  ;; No idea how this will perform.
+  ;; Calculate the position in the 1D state that corresponds to this patch
+  let x [pxcor] of p
+  let y [pycor] of p
+  
+  ;; Convert 2D coordinates to 1D index
+  ;; We're assuming row-major order (y varies faster than x)
+  let idx ((y + 50) * grid-size) + (x + 50)
+  
+  ;; Update the 1D state at the latest frame
+  let frame-start max list 0 (length one-d-state - grid-size * grid-size)
+  let state-idx frame-start + idx
+  
+  ;; Make sure we're within bounds
+  if state-idx < length one-d-state [
+    ;; Update the state
+    ifelse [living?] of p
+    [ set one-d-state replace-item state-idx one-d-state 1 ]
+    [ set one-d-state replace-item state-idx one-d-state 0 ]
+  ]
+end
 
 
 ; 1998!! This model is literally a millenial.
