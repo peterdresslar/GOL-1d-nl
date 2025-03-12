@@ -1,69 +1,247 @@
 globals [
-  erasing?        ;; PDD: Stet.
+  erasing?        ;; PDD: Leave as is?
+  grid-size       ;; how to make this work with GRAPHICS-WINDOW?
+  one-d-state     ;; 1d state of the grid, could get pretty big. we could dump frames i guess, as we only need 2.
+  current-pos     ;; current place in the tape
 ]
 
 patches-own [
   living?         ;; PDD: Sure, whatever.
   live-neighbors  ;; PDD: Awwwww, shucks, we have to break this.
+  is-1d-cell      ;; PDD: Is this patch part of the 1d grid?
 ]
 
 to setup-blank
   clear-all
-  set grid-size 10  ;; Or whatever size you want for your 2D grid
-  setup-world-regions
-  ask patches [ cell-death ]
-  initialize-1d-state
+  set grid-size 101  ;; From -50 to 50 = 101 cells wide
+  
+  ;; Initialize our patches
+  ask patches [
+    ifelse pycor = -51
+      [ set is-1d-cell true ]    ;; Bottom row is for 1D display
+      [ set is-1d-cell false ]   ;; Everything else is 2D
+    
+    cell-death  ;; Start with all cells dead
+  ]
+  
+  ;; Initialize the 1D state with all zeros
+  set one-d-state []
+  repeat (grid-size * grid-size) [
+    set one-d-state lput 0 one-d-state
+  ]
+  
+  ;; Set the current position to the beginning
+  set current-pos 0
+  
   reset-ticks
 end
 
 to setup-world-regions
-  ;; definte the 1d world region.
+  ;; define the 1d world region.
+    ask patches [
+    ifelse pycor < -50  ;; Bottom row for 1D display
+      [ set is-1d-display? true ]
+      [ set is-1d-display? false ]
+  ]
+  ;; Draw a dividing line
+  ask patches with [pycor = -50] [
+    set pcolor white
+  ]
+end
 
+to initialize-1d-state
+  ;; Create the initial 1D state based on the 2D grid
+  set one-d-state []
+  set current-pos 0
+  ;; Initialize with zeros or based on the current 2D state
+  repeat (grid-size * grid-size) [
+    set one-d-state lput 0 one-d-state
+  ]
+end
 
-to setup-random ;; PDD: just kill this button?
+to initialize-2d-state
+  ;; PDD: I guess we could read this back into the 1d state?
+end
+
+to setup-random
+  ;; PDD: Okay, we can do this, but what we need to do is set up the 2d state, draw it,
+  ;; then read it back to the 1d state, and the we need to scroll the 1d state to
+  ;; its end (the right edge) in its world region
   clear-all
+  set grid-size 101
+  ;; ask only the 2d patches... 
   ask patches
-    [ ifelse random-float 100.0 < initial-density
-      [ cell-birth ]
-      [ cell-death ] ]
+    [
+      ifelse pycor = -51
+        [ set is-1d-cell true ]    ;; Bottom row is for 1D display
+        [ set is-1d-cell false ]   ;; Everything else is 2D
+
+      ;; and now we can randomize
+      ifelse (not is-1d-cell) and (random-float 100.0 < initial-density)
+        [ cell-birth ]
+        [ cell-death ] 
+    ]
+
+  ;; okay, now we need to copy that back into 1d. 
+  copy-2d-state-to-1d
+
+  ;; set position, but still need to TODO scroll.
+  set current-pos 0
+
   reset-ticks
 end
 
-to cell-birth
-  set living? true
-  set pcolor fgcolor
+to copy-2d-state-to-1d
+  set one-d-state []
+
+  let y-range (range -50 51)
+  let x-range (range -50 51)
+  
+  foreach y-range [ y ->
+    foreach x-range [ x ->
+      ;; Skip the 1D display row
+      if y > -51 [
+        let p patch x y
+        ifelse [living?] of p
+          [ set one-d-state lput 1 one-d-state ]
+          [ set one-d-state lput 0 one-d-state ]
+      ]
+    ]
+  ]
 end
 
-to cell-death
+to cell-birth  ;; mostly the same.
+  set living? true
+  ifelse is-1d-cell
+    [ set pcolor green ]  ;; Green for 1D cells (terminal style)
+    [ set pcolor fgcolor ] ;; Regular color for 2D cells
+end
+
+to cell-death  ;; mostly the same.
   set living? false
-  set pcolor bgcolor
+  ifelse is-1d-cell
+    [ set pcolor black ]  ;; Black for 1D cells (terminal style)
+    [ set pcolor bgcolor ] ;; Regular color for 2D cells
 end
 
 to go
-  ask patches
-    [ set live-neighbors count neighbors with [living?] ]
-  ;; Starting a new "ask patches" here ensures that all the patches
-  ;; finish executing the first ask before any of them start executing
-  ;; the second ask.  This keeps all the patches in synch with each other,
-  ;; so the births and deaths at each generation all happen in lockstep.
-  ask patches
-    [ ifelse live-neighbors = 3
-      [ cell-birth ]
-      [ if live-neighbors != 2
-        [ cell-death ] ] ]
+  ;; Process the next step in the 1D representation
+  process-1d-step
+  
+  ;; Update the 1D display row
+  update-1d-display
+  
+  ;; Periodically update the 2D display (every grid-size^2 steps)
+  if ticks mod (grid-size * grid-size) = 0 and ticks > 0 [
+    update-2d-from-1d
+  ]
+  
   tick
 end
 
-to draw-cells ;; PDD: Make sure that only the 2d patches are operated on.
-  ifelse mouse-down? [
-    if erasing? = 0 [
-      set erasing? [living?] of patch mouse-xcor mouse-ycor
+to process-1d-step
+  ;; This is where we implement the 1D version of Conway's Game of Life
+  ;; from the notebook, idea.ipynb!
+  
+  let t grid-size * grid-size
+  let n current-pos
+  
+  ;; Calculate neighborhood positions from the previous state
+  let x grid-size
+  
+  ;; Relative positions might not be valid
+  let top3-prior-pos (list (n - t - x - 1) (n - t - x) (n - t - x + 1))
+  let middle2-prior-pos (list (n - t - 1) (n - t + 1))
+  let bottom3-prior-pos (list (n - t + x - 1) (n - t + x) (n - t + x + 1))
+  
+  ;; Filter out invalid positions
+  let valid-positions []
+  foreach (sentence top3-prior-pos middle2-prior-pos bottom3-prior-pos) [ pos ->
+    if pos >= 0 and pos < length one-d-state [
+      set valid-positions lput pos valid-positions
     ]
-    ask patch mouse-xcor mouse-ycor [
-      ifelse erasing? [
-        cell-death
-      ] [
-        cell-birth
+  ]
+  
+  ;; Count live neighbors
+  let old-self item (n - t) one-d-state  ;; one-d-state is our state list, which is not terribly netlogo-ic, but it should work.
+  let old-live-neighbors 0
+  foreach valid-positions [ pos ->
+    set old-live-neighbors old-live-neighbors + item pos one-d-state
+  ]  ;; this corresponds to the sum of neighbors from the notebook. again, we are reading out of state not patches.
+  
+  ;; Apply Conway's GOL rules, which work the same in 1d and 2d, which is fun.
+  let new-state 0
+  ifelse (old-self = 1 and (old-live-neighbors = 2 or old-live-neighbors = 3)) or
+         (old-self = 0 and old-live-neighbors = 3)
+    [ set new-state 1 ]
+    [ set new-state 0 ]
+  
+  ;; Add the new state to our 1D representation
+  set one-d-state lput new-state one-d-state
+  
+  ;; Update current position
+  set current-pos current-pos + 1
+end
+
+to update-1d-display
+  ;; Update the 1D display row based on the current state, the tricky part being scrolling.
+  let display-width 101  ;; Width of our display row
+  let start-pos max list 0 (length one-d-state - display-width)
+  
+  let i 0
+  foreach (range -50 51) [ x ->
+    let pos start-pos + i
+    if pos < length one-d-state [
+      let cell-state item pos one-d-state
+      ask patch x -51 [
+        ifelse cell-state = 1
+          [ set pcolor green ]
+          [ set pcolor black ]
+      ]
+    ]
+    set i i + 1
+  ]
+end
+
+to update-2d-from-1d
+  ;; Update the 2D display based on the current 1D state
+  ;; We'll take the last grid-size^2 elements from one-d-state
+  
+  let t grid-size * grid-size
+  let start-pos max list 0 (length one-d-state - t)
+  
+  let i 0
+  foreach (range -50 51) [ y ->
+    if y > -51 [  ;; Skip the 1D display row
+      foreach (range -50 51) [ x ->
+        let pos start-pos + i
+        if pos < length one-d-state [
+          let cell-state item pos one-d-state
+          ask patch x y [
+            ifelse cell-state = 1
+              [ cell-birth ]
+              [ cell-death ]
+          ]
+        ]
+        set i i + 1
+      ]
+    ]
+  ]
+end
+
+to draw-cells  ;; From the old model; the name is confusing. This is an input function.
+  ifelse mouse-down? [
+    let p patch mouse-xcor mouse-ycor
+    if [not is-1d-cell] of p [  ;; Only operate on 2D cells!!
+      if erasing? = 0 [
+        set erasing? [living?] of p
+      ]
+      ask p [
+        ifelse erasing? [
+          cell-death
+        ] [
+          cell-birth
+        ]
       ]
     ]
     display
@@ -71,6 +249,10 @@ to draw-cells ;; PDD: Make sure that only the 2d patches are operated on.
     set erasing? 0
   ]
 end
+
+
+
+; 1998!! This model is literally a millenial.
 
 
 ; Copyright 1998 Uri Wilensky.
@@ -96,9 +278,9 @@ GRAPHICS-WINDOW
 -50
 50
 -50
-50
-1
-1
+51
+0
+0
 1
 ticks
 15
