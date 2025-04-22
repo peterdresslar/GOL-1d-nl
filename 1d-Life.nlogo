@@ -1,7 +1,57 @@
 ;; I've wound up rather re-writing the model due to the 2D -> 1D -> 2D processing.
 
 
-;; a. any initialization -> setup-world-regions -> 
+;; fundamentally: 1D GOL takes the 2D finite domain and maps it to a 1D tape.
+;; Assuming a 2D finite domain bounded by sides n and n, the 1D tape length is of course n*n,
+;; which we will call N.
+
+;; we should specific that we (arbitrarily) perform the mapping of the 1D state to the 2D state
+;; in the order of left to right, top to bottom.
+
+
+
+
+;; for convenience, letʻs use "keypad" style coordinates when referring to the 2D neighbors.
+;; the neighbors are:
+;; 7 8 9
+;; 4 5 6
+;; 1 2 3
+;; where 5 is actually the prior state.
+
+;; Let `s` be the index (0 to N-1) of the cell being processed for the current time step `t`.
+;; N = n*n is the total number of cells (grid-size * grid-size).
+;; We use two state lists: `S` (current state, corresponds to `one-d-state`) and `S_prev` (previous state, corresponds to `prev-one-d-state`).
+;; The state for cell `s` at time `t`, `s[t]`, is calculated based on values from `s[t-1]`.
+
+;; To calculate s[t], we need the state of cell `s` at time `t-1` (s[t-1]) and the states of its 8 neighbors at time `t-1` (Neighbors(t-1)).
+;; s[t-1] is simply the value at index `s` in the previous state list:
+;; s[t-1] = S_prev[s_idx] (equates to s-N)
+
+;; The indices for the 8 neighbors in S_prev, relative to `s`, are calculated using the grid-side dimension `n` and the grid-size `N` 
+;; and wrapped using modulo `N`.
+;; We use `(index + N) mod N` to handle potential negative results (off tape low or high) correctly.
+;; Keypad indices map to S_prev indices as follows:
+;; 7: (s - n - 1 + N) mod N
+;; 8: (s - n + N) mod N
+;; 9: (s - n + 1 + N) mod N
+;; 4: (s - 1 + N) mod N
+;; 6: (s + 1 + N) mod N
+;; 1: (s + n - 1 + N) mod N
+;; 2: (s + n + N) mod N
+;; 3: (s + n + 1 + N) mod N
+
+;; Neighbors(t-1) is the sum of the values in S_prev at these 8 neighbor indices.
+;; Neighbors(t-1) = (item ((s-n-1+N) mod N) S_prev) + (item ((s-n+N) mod N) S_prev) + ... + (item ((s+n+1+N) mod N) S_prev)
+
+;; and then adopting the rules of Conway's Game of Life:
+;; s[t] = 1 if (s[t-1] = 1 and Neighbors(t-1) is 2 or 3) or (s[t-1] = 0 and Neighbors(t-1) = 3)
+;; s[t] = 0 otherwise.
+
+;; IN THIS MODEL:
+;; The 1D state is the master state, andis updated using the rules of Conway's Game of Life adjusted as we communicate above.
+;; the 1D state is then used to update the 2D display.
+
+;; a. any initialization -> setup-world-regions ->
 ;;    convert 2D patches to 1D state -> handle 1D state patches (update and scroll)
 
 ;; b. tick -> update 1D state (use GOL 1D rules) -> handle 1D state patches (update and scroll)
@@ -31,28 +81,28 @@ patches-own [
 to setup-blank
   clear-all
   set grid-size 101  ;; From -50 to 50 = 101 cells wide
-  
+
   ;; Initialize our patches
   ask patches [
     ifelse pycor = -51
       [ set is-1d-cell true ]    ;; Bottom row is for 1D display
       [ set is-1d-cell false ]   ;; Everything else is 2D
-    
+
     cell-death  ;; Start with all cells dead
   ]
-  
+
   ;; Initialize the 1D state with all zeros
   set one-d-state []
-  
+
   ;; Fill with enough zeros to have history for the first calculations
   ;; We need grid-size^2 zeros for the initial state, plus enough for the first calculation
   repeat (grid-size * grid-size) + (grid-size * 2 + 3) [
     set one-d-state lput 0 one-d-state
   ]
-  
+
   ;; Set the current position to the beginning
   set current-pos (grid-size * grid-size)
-  
+
   reset-ticks
 end
 
@@ -63,7 +113,7 @@ to setup-random
   ;; its end (the right edge) in its world region
   clear-all
   set grid-size 101
-  ;; ask only the 2d patches... 
+  ;; ask only the 2d patches...
   ask patches
     [
       ifelse pycor = -51
@@ -73,22 +123,22 @@ to setup-random
       ;; and now we can randomize
       ifelse (not is-1d-cell) and (random-float 100.0 < initial-density)
         [ cell-birth ]
-        [ cell-death ] 
+        [ cell-death ]
     ]
 
-  ;; okay, now we need to copy that back into 1d. 
+  ;; okay, now we need to copy that back into 1d.
   copy-2d-state-to-1d
-  
+
   ;; Add padding for history
   let padding []
   repeat (grid-size * 2 + 3) [
     set padding lput 0 padding
   ]
   set one-d-state (sentence padding one-d-state)
-  
+
   ;; Set position to beginning of meaningful part
   set current-pos (grid-size * grid-size)
-  
+
   reset-ticks
 end
 
@@ -106,7 +156,7 @@ to draw-cells  ;; From the old model, actually an input-setup function.
           cell-birth
         ]
       ]
-      
+
       ;; Important: update the corresponding position in the 1D state
       update-1d-state-from-2d-patch p
     ]
@@ -143,26 +193,26 @@ end
 ;;;; PROCEDURES
 
 to gol-1d
-  ;; with a 1D state array (implemented here as a list) 
-  ;;   and the current position 
+  ;; with a 1D state array (implemented here as a list)
+  ;;   and the current position
   ;;   and the state at the current position (old-self):
   ;; find the apppropriate "neighbors" using a temporal shift (modulo arithmetic)
   ;; Game of Life rules algebra stays the same in 1D and 2D.
 
   ;; This is where we implement the 1D version of Conway's Game of Life
   ;; from the notebook, idea.ipynb!
-  
+
   let t grid-size * grid-size
   let n current-pos
-  
+
   ;; Calculate neighborhood positions from the previous state
   let x grid-size
-  
+
   ;; Relative positions might not be valid
   let top3-prior-pos (list (n - t - x - 1) (n - t - x) (n - t - x + 1))
   let middle2-prior-pos (list (n - t - 1) (n - t + 1))
   let bottom3-prior-pos (list (n - t + x - 1) (n - t + x) (n - t + x + 1))
-  
+
   ;; Filter out invalid positions
   let valid-positions []
   foreach (sentence top3-prior-pos middle2-prior-pos bottom3-prior-pos) [ pos ->
@@ -170,25 +220,25 @@ to gol-1d
       set valid-positions lput pos valid-positions
     ]
   ]
-  
+
   ;; Count live neighbors
   let old-self item (n - t) one-d-state  ;; one-d-state is our state list, which is not terribly netlogo-ic, but it should work.
   let old-live-neighbors 0
   foreach valid-positions [ pos ->
     set old-live-neighbors old-live-neighbors + item pos one-d-state
   ]  ;; this corresponds to the sum of neighbors from the notebook. again, we are reading out of state not patches.
-  
+
   ;; Apply Conway's GOL rules, which work the same in 1d and 2d, which is fun.
   let new-state 0
   ifelse (old-self = 1 and (old-live-neighbors = 2 or old-live-neighbors = 3)) or
          (old-self = 0 and old-live-neighbors = 3)
     [ set new-state 1 ]
     [ set new-state 0 ]
-  
 
 
 
 
+end
 
 
 
@@ -198,7 +248,7 @@ to copy-2d-state-to-1d
 
   let y-range (range -50 51)
   let x-range (range -50 51)
-  
+
   foreach y-range [ y ->
     foreach x-range [ x ->
       ;; Skip the 1D display row
@@ -227,10 +277,10 @@ to cell-death  ;; mostly the same.
 end
 
 to process-1d-step
- 
+
   ;; Add the new state to our 1D representation
   set one-d-state lput new-state one-d-state
-  
+
   ;; Update current position
   set current-pos current-pos + 1
 end
@@ -239,7 +289,7 @@ to update-1d-display
   ;; Update the 1D display row based on the current state, the tricky part being scrolling.
   let display-width 101  ;; Width of our display row
   let start-pos max list 0 (length one-d-state - display-width)
-  
+
   let i 0
   foreach (range -50 51) [ x ->
     let pos start-pos + i
@@ -249,7 +299,7 @@ to update-1d-display
         ifelse cell-state = 1
           [ set pcolor green ]
           [ set pcolor black ]
-        
+
         ;; Add a visual indicator for frame boundaries
         if pos mod (grid-size * grid-size) = 0 [
           ;; Mark the beginning of a new frame with a different color
@@ -264,10 +314,10 @@ end
 to update-2d-from-1d
   ;; Update the 2D display based on the current 1D state
   ;; We'll take the last grid-size^2 elements from one-d-state
-  
+
   let t grid-size * grid-size
   let start-pos max list 0 (length one-d-state - t)
-  
+
   let i 0
   foreach (range -50 51) [ y ->
     if y > -51 [  ;; Skip the 1D display row
@@ -293,15 +343,15 @@ to update-1d-state-from-2d-patch [p]  ;; No idea how this will perform.
   ;; Calculate the position in the 1D state that corresponds to this patch
   let x [pxcor] of p
   let y [pycor] of p
-  
+
   ;; Convert 2D coordinates to 1D index
   ;; We're assuming row-major order (y varies faster than x)
   let idx ((y + 50) * grid-size) + (x + 50)
-  
+
   ;; Update the 1D state at the latest frame
   let frame-start max list 0 (length one-d-state - grid-size * grid-size)
   let state-idx frame-start + idx
-  
+
   ;; Make sure we're within bounds
   if state-idx < length one-d-state [
     ;; Update the state
@@ -338,17 +388,17 @@ end
 to go
   ;; Process the next step in the 1D representation
   process-1d-step
-  
+
   ;; Update the 1D display row
   update-1d-display
-  
+
   ;; Periodically update the 2D display (every grid-size^2 steps)
   if ticks mod (grid-size * grid-size) = 0 and ticks > 0 [
     update-2d-from-1d
 
     dump-current-frame
   ]
-  
+
   tick
 end
 
@@ -362,10 +412,10 @@ GRAPHICS-WINDOW
 285
 10
 697
-423
+427
 -1
 -1
-4
+4.0
 1
 10
 1
@@ -383,7 +433,7 @@ GRAPHICS-WINDOW
 0
 1
 ticks
-15
+15.0
 
 SLIDER
 120
@@ -394,7 +444,7 @@ initial-density
 initial-density
 0.0
 100.0
-35
+35.0
 0.1
 1
 %
@@ -503,7 +553,7 @@ TEXTBOX
 193
 When this button is down,\nyou can add or remove\ncells by holding down\nthe mouse button\nand \"drawing\".
 11
-0
+0.0
 0
 
 BUTTON
@@ -529,7 +579,7 @@ INPUTBOX
 274
 369
 fgcolor
-123
+123.0
 1
 0
 Color
@@ -540,10 +590,11 @@ INPUTBOX
 274
 431
 bgcolor
-79
+79.0
 1
 0
 Color
+
 @#$#@#$#@
 ## WHAT IS IT?
 
@@ -945,15 +996,15 @@ NetLogo 6.4.0
 @#$#@#$#@
 @#$#@#$#@
 default
-0
--0.2 0 0 1
-0 1 1 0
-0.2 0 0 1
+0.0
+-0.2 0 0.0 1.0
+0.0 1 1.0 0.0
+0.2 0 0.0 1.0
 link direction
 true
 0
 Line -7500403 true 150 150 90 180
 Line -7500403 true 150 150 210 180
 @#$#@#$#@
-
+0
 @#$#@#$#@

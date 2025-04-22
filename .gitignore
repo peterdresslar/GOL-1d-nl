@@ -8,3 +8,6 @@ wheels/
 
 # Virtual environments
 .venv
+
+# NetLogo
+netlogo-6.0.4/
