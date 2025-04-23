@@ -27,7 +27,7 @@
 ;; s[t-1] is simply the value at index `s` in the previous state list:
 ;; s[t-1] = S_prev[s_idx] (equates to s-N)
 
-;; The indices for the 8 neighbors in S_prev, relative to `s`, are calculated using the grid-side dimension `n` and the grid-size `N` 
+;; The indices for the 8 neighbors in S_prev, relative to `s`, are calculated using the grid-side dimension `n` and the grid-size `N`
 ;; and wrapped using modulo `N`.
 ;; We use `(index + N) mod N` to handle potential negative results (off tape low or high) correctly.
 ;; Keypad indices map to S_prev indices as follows:
@@ -63,15 +63,16 @@
 ;;;; HOUSEKEEPING
 
 globals [
-  erasing?        ;; PDD: Leave as is?
-  grid-size       ;; how to make this work with GRAPHICS-WINDOW?
-  one-d-state     ;; 1d state of the grid, could get pretty big. we could dump frames i guess, as we only need 2.
-  current-pos     ;; current place in the tape
+  erasing?        ;; from the base model. used to toggle erasing mode--not sure if we can keep this.
+  grid-side       ;; how to make this work with GRAPHICS-WINDOW?
+  grid-squared    ;; grid-side * grid-side
+  current-state     ;; 1d state of the grid, could get pretty big.
+  previous-state    ;; 1d state of the grid, could get pretty big.
+  current-1d-position     ;; current place in the tape
 ]
 
 patches-own [
-  living?         ;; PDD: Sure, whatever.
-  live-neighbors  ;; PDD: Awwwww, shucks, we have to break this.
+  living?         ;; indicates if the cell is living
   is-1d-cell      ;; PDD: Is this patch part of the 1d grid?
 ]
 
@@ -80,64 +81,50 @@ patches-own [
 
 to setup-blank
   clear-all
-  set grid-size 101  ;; From -50 to 50 = 101 cells wide
+  set grid-side 101  ;; n
+  set grid-squared (grid-side * grid-side) ;; N
+  ask patches [ cell-death ]
+  ;; here we will convert the base model procedure to our terms; initalize the 1d state and then
+  ;; update 2d based on 1d statae
 
-  ;; Initialize our patches
-  ask patches [
-    ifelse pycor = -51
-      [ set is-1d-cell true ]    ;; Bottom row is for 1D display
-      [ set is-1d-cell false ]   ;; Everything else is 2D
+  set current-state []
+  set previous-state []
 
-    cell-death  ;; Start with all cells dead
-  ]
+  set current-state (n-values grid-squared [false])
+  set previous-state (n-values grid-squared [false])
 
-  ;; Initialize the 1D state with all zeros
-  set one-d-state []
+  set current-1d-position grid-squared
 
-  ;; Fill with enough zeros to have history for the first calculations
-  ;; We need grid-size^2 zeros for the initial state, plus enough for the first calculation
-  repeat (grid-size * grid-size) + (grid-size * 2 + 3) [
-    set one-d-state lput 0 one-d-state
-  ]
-
-  ;; Set the current position to the beginning
-  set current-pos (grid-size * grid-size)
+  update-1d-patches
+  update-2d-patches
 
   reset-ticks
 end
 
 
+
 to setup-random
-  ;; PDD: Okay, we can do this, but what we need to do is set up the 2d state, draw it,
-  ;; then read it back to the 1d state, and the we need to scroll the 1d state to
-  ;; its end (the right edge) in its world region
   clear-all
-  set grid-size 101
-  ;; ask only the 2d patches...
-  ask patches
-    [
-      ifelse pycor = -51
-        [ set is-1d-cell true ]    ;; Bottom row is for 1D display
-        [ set is-1d-cell false ]   ;; Everything else is 2D
+  set grid-side 101  ;; n
+  set grid-squared (grid-side * grid-side) ;; N
 
-      ;; and now we can randomize
-      ifelse (not is-1d-cell) and (random-float 100.0 < initial-density)
-        [ cell-birth ]
-        [ cell-death ]
-    ]
+  ask patches [ cell-death ]
+  ;; here we will convert the base model procedure to our terms; initalize the 1d state and then
+  ;; update 2d based on 1d statae
 
-  ;; okay, now we need to copy that back into 1d.
-  copy-2d-state-to-1d
+  set current-state []
+  set previous-state []
 
-  ;; Add padding for history
-  let padding []
-  repeat (grid-size * 2 + 3) [
-    set padding lput 0 padding
-  ]
-  set one-d-state (sentence padding one-d-state)
+  set current-state (n-values grid-squared [(random-float 100.0 < initial-density)])  ;; use randome function from base model to fill current state.
+  set previous-state (n-values grid-squared [false])
 
-  ;; Set position to beginning of meaningful part
-  set current-pos (grid-size * grid-size)
+  set current-1d-position grid-squared
+
+  output-print current-state
+  output-print previous-state
+
+  update-1d-patches
+  update-2d-patches
 
   reset-ticks
 end
@@ -158,7 +145,7 @@ to draw-cells  ;; From the old model, actually an input-setup function.
       ]
 
       ;; Important: update the corresponding position in the 1D state
-      update-1d-state-from-2d-patch p
+      ;;update-1d-state-from-2d-patch p
     ]
     display
   ] [
@@ -166,243 +153,67 @@ to draw-cells  ;; From the old model, actually an input-setup function.
   ]
 end
 
-to setup-world-regions
-  ;; define the 1d world region.
-  ask patches [
-    ifelse pycor < -50  ;; Bottom row for 1D display
-      [ set is-1d-cell true ]  ;; Changed from is-1d-display? to is-1d-cell
-      [ set is-1d-cell false ]
-  ]
-  ;; Draw a dividing line
-  ask patches with [pycor = -50] [
-    set pcolor white
-  ]
-end
+to update-1d-patches
+  ;; very different from the base model since
+  ;; in that model patch status is the acutal state.
 
-to initialize-1d-state
-  ;; Create the initial 1D state based on the 2D grid
-  set one-d-state []
-  set current-pos 0
-  ;; Initialize with zeros or based on the current 2D state
-  repeat (grid-size * grid-size) [
-    set one-d-state lput 0 one-d-state
-  ]
-end
+  ;; here, we use current-state and the current-1d-position to update the 1D display
+  ;; we should display the most recent grid-side of the 1D state based on the current-1d-position
 
+  let bookmark current-1d-position - grid-side
 
-;;;; PROCEDURES
+  let state-view sublist current-state bookmark current-1d-position
+  ;; we need to work entirely with the max pycor row
 
-to gol-1d
-  ;; with a 1D state array (implemented here as a list)
-  ;;   and the current position
-  ;;   and the state at the current position (old-self):
-  ;; find the apppropriate "neighbors" using a temporal shift (modulo arithmetic)
-  ;; Game of Life rules algebra stays the same in 1D and 2D.
+  ;; for our pxcor values, we need to start on the negative side of the axis and work to the positive side.
+  ;; the negative side is -1 * (floor(grid-side / 2)
 
-  ;; This is where we implement the 1D version of Conway's Game of Life
-  ;; from the notebook, idea.ipynb!
-
-  let t grid-size * grid-size
-  let n current-pos
-
-  ;; Calculate neighborhood positions from the previous state
-  let x grid-size
-
-  ;; Relative positions might not be valid
-  let top3-prior-pos (list (n - t - x - 1) (n - t - x) (n - t - x + 1))
-  let middle2-prior-pos (list (n - t - 1) (n - t + 1))
-  let bottom3-prior-pos (list (n - t + x - 1) (n - t + x) (n - t + x + 1))
-
-  ;; Filter out invalid positions
-  let valid-positions []
-  foreach (sentence top3-prior-pos middle2-prior-pos bottom3-prior-pos) [ pos ->
-    if pos >= 0 and pos < length one-d-state [
-      set valid-positions lput pos valid-positions
+  let i -1 * (floor grid-side / 2)
+  foreach state-view [ state ->
+    ifelse state [
+      ask patch i max-pycor [ cell-birth ]
+    ] [
+      ask patch i max-pycor [ cell-death ]
     ]
+    set i (i + 1)
+
   ]
-
-  ;; Count live neighbors
-  let old-self item (n - t) one-d-state  ;; one-d-state is our state list, which is not terribly netlogo-ic, but it should work.
-  let old-live-neighbors 0
-  foreach valid-positions [ pos ->
-    set old-live-neighbors old-live-neighbors + item pos one-d-state
-  ]  ;; this corresponds to the sum of neighbors from the notebook. again, we are reading out of state not patches.
-
-  ;; Apply Conway's GOL rules, which work the same in 1d and 2d, which is fun.
-  let new-state 0
-  ifelse (old-self = 1 and (old-live-neighbors = 2 or old-live-neighbors = 3)) or
-         (old-self = 0 and old-live-neighbors = 3)
-    [ set new-state 1 ]
-    [ set new-state 0 ]
-
-
 
 
 end
 
-
-
-
-to copy-2d-state-to-1d
-  set one-d-state []
-
-  let y-range (range -50 51)
-  let x-range (range -50 51)
-
-  foreach y-range [ y ->
-    foreach x-range [ x ->
-      ;; Skip the 1D display row
-      if y > -51 [
-        let p patch x y
-        ifelse [living?] of p
-          [ set one-d-state lput 1 one-d-state ]
-          [ set one-d-state lput 0 one-d-state ]
-      ]
-    ]
-  ]
+to update-2d-patches
+  ;; TODO
 end
 
-to cell-birth  ;; mostly the same.
+to cell-birth   ;;; from the base model
   set living? true
-  ifelse is-1d-cell
-    [ set pcolor green ]  ;; Green for 1D cells (terminal style)
-    [ set pcolor fgcolor ] ;; Regular color for 2D cells
+  set pcolor fgcolor
 end
 
-to cell-death  ;; mostly the same.
+to cell-death   ;;; from the base model
   set living? false
-  ifelse is-1d-cell
-    [ set pcolor black ]  ;; Black for 1D cells (terminal style)
-    [ set pcolor bgcolor ] ;; Regular color for 2D cells
-end
-
-to process-1d-step
-
-  ;; Add the new state to our 1D representation
-  set one-d-state lput new-state one-d-state
-
-  ;; Update current position
-  set current-pos current-pos + 1
-end
-
-to update-1d-display
-  ;; Update the 1D display row based on the current state, the tricky part being scrolling.
-  let display-width 101  ;; Width of our display row
-  let start-pos max list 0 (length one-d-state - display-width)
-
-  let i 0
-  foreach (range -50 51) [ x ->
-    let pos start-pos + i
-    if pos < length one-d-state [
-      let cell-state item pos one-d-state
-      ask patch x -51 [
-        ifelse cell-state = 1
-          [ set pcolor green ]
-          [ set pcolor black ]
-
-        ;; Add a visual indicator for frame boundaries
-        if pos mod (grid-size * grid-size) = 0 [
-          ;; Mark the beginning of a new frame with a different color
-          set pcolor yellow
-        ]
-      ]
-    ]
-    set i i + 1
-  ]
-end
-
-to update-2d-from-1d
-  ;; Update the 2D display based on the current 1D state
-  ;; We'll take the last grid-size^2 elements from one-d-state
-
-  let t grid-size * grid-size
-  let start-pos max list 0 (length one-d-state - t)
-
-  let i 0
-  foreach (range -50 51) [ y ->
-    if y > -51 [  ;; Skip the 1D display row
-      foreach (range -50 51) [ x ->
-        let pos start-pos + i
-        if pos < length one-d-state [
-          let cell-state item pos one-d-state
-          ask patch x y [
-            ifelse cell-state = 1
-              [ cell-birth ]
-              [ cell-death ]
-          ]
-        ]
-        set i i + 1
-      ]
-    ]
-  ]
-end
-
-
-
-to update-1d-state-from-2d-patch [p]  ;; No idea how this will perform.
-  ;; Calculate the position in the 1D state that corresponds to this patch
-  let x [pxcor] of p
-  let y [pycor] of p
-
-  ;; Convert 2D coordinates to 1D index
-  ;; We're assuming row-major order (y varies faster than x)
-  let idx ((y + 50) * grid-size) + (x + 50)
-
-  ;; Update the 1D state at the latest frame
-  let frame-start max list 0 (length one-d-state - grid-size * grid-size)
-  let state-idx frame-start + idx
-
-  ;; Make sure we're within bounds
-  if state-idx < length one-d-state [
-    ;; Update the state
-    ifelse [living?] of p
-    [ set one-d-state replace-item state-idx one-d-state 1 ]
-    [ set one-d-state replace-item state-idx one-d-state 0 ]
-  ]
-end
-
-to dump-current-frame
-  ;; Get the current frame from the 1D state by dividing by grid-size * grid-size
-  ;; We are getting called (hopefully) at the end of a frame only.
-  ;; But, we can still check which frame we are currently working on.
-
-  let current-frame-number ticks / (grid-size * grid-size)   ;; check for off-by-one
-
-  ;; Okay. We know what the current frame number is. Now we can build a frame string
-  ;; by just subtracting current-frame-number * grid-size * grid-size positions from the beginning of the one-d-state an
-  ;; copying that result to current-frame. Current-frame might be any length but it should at least be current!
-
-  let current-frame sublist one-d-state (current-frame-number * grid-size * grid-size) (current-frame-number * grid-size * grid-size + grid-size * grid-size)
-
-  let frame-string ""
-  foreach current-frame [ cell ->
-    ifelse cell = 1
-      [ set frame-string (word frame-string "█") ]  ;; Full block for live cells
-      [ set frame-string (word frame-string "·") ]  ;; Middle dot for dead cells
-  ]
-
-  ;; Print the frame number and the 1D representation
-  output-print (word "Frame " (current-frame-number) ": " frame-string)
+  set pcolor bgcolor
 end
 
 to go
   ;; Process the next step in the 1D representation
-  process-1d-step
+  ;;process-1d-step
 
   ;; Update the 1D display row
-  update-1d-display
+ ;; update-1d-display
 
   ;; Periodically update the 2D display (every grid-size^2 steps)
-  if ticks mod (grid-size * grid-size) = 0 and ticks > 0 [
-    update-2d-from-1d
+  if ticks mod (grid-squared) = 0 and ticks > 0 [
+    ;;update-2d-from-1d
 
-    dump-current-frame
+    ;;dump-current-frame
   ]
 
   tick
 end
 
-; 1998!! This model is literally a millenial.
+
 
 
 ; Copyright 1998 Uri Wilensky.
