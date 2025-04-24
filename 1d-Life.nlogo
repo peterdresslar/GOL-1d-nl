@@ -137,6 +137,13 @@ to setup-random
 end
 
 to setup-border
+  ask patches [
+    set is-1d-cell false
+    set is-border-cell false
+  ]
+  ask patches with [ pycor = max-pycor ] [
+    set is-1d-cell true
+  ]
   ask patches with [ pycor = max-pycor - 1 ] [
     set is-border-cell true
     cell-border
@@ -195,7 +202,18 @@ to update-1d-patches
 end
 
 to update-2d-patches
-
+  let half-grid floor (grid-side / 2)
+  ask patches with [ not is-border-cell and not is-1d-cell ] [
+    ;; -50, 50: current state pos[0]
+    ;; 50, 50: current state pos [grid-side]
+    ;; 0, 0: current state pos [(grid-side * grid-side / 2) + (grid-side / 2) + 1]
+    ;; -50, -50: current state pos [(grid-side * grid-side) - grid-side]
+    ;; 50, -50: current state pos [(grid-side * grid-side) - 1]
+    output_print([pxcor pycor] of self)
+    let idx ((max-pycor - pycor) * (max-pxcor - min-pxcor + 1)) + (pxcor - min-pxcor)
+    set living? item idx current-state
+  ]
+  display
 end
 
 to cell-birth   ;;; from the base model
