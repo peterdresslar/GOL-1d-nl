@@ -311,16 +311,28 @@ end
 
 to-report evaluate
   let prev-neighbors
-    (item ((current-1d-position - grid-side - 1 + grid-squared) mod grid-squared) previous-state) +
-    (item ((current-1d-position - grid-side + grid-squared) mod grid-squared) previous-state) +
-    (item ((current-1d-position - grid-side + 1 + grid-squared) mod grid-squared) previous-state) +
-    (item ((current-1d-position - 1 + grid-squared) mod grid-squared) previous-state) +
-    (item ((current-1d-position + 1 + grid-squared) mod grid-squared) previous-state) +
-    (item ((current-1d-position + grid-side - 1 + grid-squared) mod grid-squared) previous-state) +
-    (item ((current-1d-position + grid-side + grid-squared) mod grid-squared) previous-state) +
-    (item ((current-1d-position + grid-side + 1 + grid-squared) mod grid-squared) previous-state)
-  let prev-self item current-1d-position previous-state
-  ifelse (prev-self = 1 and prev-neighbors = 2) or (prev-self = 0 and prev-neighbors = 3) [ report 1 ] [ report 0 ]
+    (item ((current-1d-position - grid-side - 1 + grid-squared) mod grid-squared) previous-state) +    ;; 7
+    (item ((current-1d-position - grid-side + grid-squared) mod grid-squared) previous-state) +        ;; 8
+    (item ((current-1d-position - grid-side + 1 + grid-squared) mod grid-squared) previous-state) +    ;; 9
+    (item ((current-1d-position - 1 + grid-squared) mod grid-squared) previous-state) +                ;; 4
+    (item ((current-1d-position + 1 + grid-squared) mod grid-squared) previous-state) +                ;; 6
+    (item ((current-1d-position + grid-side - 1 + grid-squared) mod grid-squared) previous-state) +    ;; 1
+    (item ((current-1d-position + grid-side + grid-squared) mod grid-squared) previous-state) +        ;; 2
+    (item ((current-1d-position + grid-side + 1 + grid-squared) mod grid-squared) previous-state)      ;; 3
+  let prev-self item current-1d-position previous-state                                                ;; 5
+
+  ;; now apply the rules of GOL -- totally the same here as in 2D, just finding neighbors is different
+  ifelse (prev-self = 1)
+  [
+    ifelse (prev-neighbors = 2 or prev-neighbors = 3)
+      [ report 1 ] ;; Survive
+      [ report 0 ] ;; Die (loneliness or overcrowding)
+  ]
+  [
+    ifelse (prev-neighbors = 3)
+      [ report 1 ] ;; Born
+      [ report 0 ] ;; Stay dead
+  ]
 end
 
 
@@ -529,9 +541,9 @@ Color
 
 BUTTON
 11
-108
+104
 113
-141
+137
 NIL
 setup-test
 NIL
