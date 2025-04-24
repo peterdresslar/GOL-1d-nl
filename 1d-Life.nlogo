@@ -79,7 +79,7 @@ patches-own [
   living?         ;; indicates if the cell is living
   is-1d-cell      ;; PDD: Is this patch part of the 1d grid?
   is-border-cell  ;; PDD: Is this patch a border cell?
-  mapping   ;; should not need this, but i did. kind of cheating.
+  mapping        ;; should not need this, but i did. kind of cheating.
 ]
 
 
