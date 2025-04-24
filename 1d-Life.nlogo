@@ -47,18 +47,6 @@
 ;; s[t] = 1 if (s[t-1] = 1 and Neighbors(t-1) is 2 or 3) or (s[t-1] = 0 and Neighbors(t-1) = 3)
 ;; s[t] = 0 otherwise.
 
-;; IN THIS MODEL:
-;; The 1D state is the master state, andis updated using the rules of Conway's Game of Life adjusted as we communicate above.
-;; the 1D state is then used to update the 2D display.
-
-;; a. any initialization -> setup-world-regions ->
-;;    convert 2D patches to 1D state -> handle 1D state patches (update and scroll)
-
-;; b. tick -> update 1D state (use GOL 1D rules) -> handle 1D state patches (update and scroll)
-
-;; c. tick (if tick number mod grid**2 = 0) -> update 1D state -> handle 1D state patches (update and scroll)
-;;    update 2D patches from 1D state -> dump state text -> optional: trim state
-
 
 ;;;; HOUSEKEEPING
 
@@ -84,6 +72,7 @@ patches-own [
 
 to setup-blank
   clear-all
+
   set grid-side 101  ;; n
   set grid-squared (grid-side * grid-side) ;; N
   ask patches [ cell-death ]
@@ -116,6 +105,7 @@ end
 
 to setup-random
   clear-all
+
   set grid-side 101  ;; n
   set grid-squared (grid-side * grid-side) ;; N
 
@@ -150,7 +140,7 @@ to setup-random
   reset-ticks
 end
 
-to setup-test
+to setup-test   ;;; just some arbitary gliders, this could be made more fun.
   setup-blank
   let glider1 floor(grid-squared / 2)
   let glider2 glider1 + grid-side + 1
@@ -213,7 +203,7 @@ end
 to draw-cells  ;; From the old model, actually an input-setup function.
   ifelse mouse-down? [
     let p patch mouse-xcor mouse-ycor
-    if [not is-1d-cell] of p [  ;; Only operate on 2D cells!!
+    if [not is-1d-cell and not is-border-cell] of p [
       if erasing? = 0 [
         set erasing? [living?] of p
       ]
@@ -223,10 +213,10 @@ to draw-cells  ;; From the old model, actually an input-setup function.
         ] [
           cell-birth
         ]
+        ;; ... now we have to map BACK to 1d
+        let idx mapping
+        set current-state replace-item idx current-state (ifelse-value living? [1] [0])
       ]
-
-      ;; Important: update the corresponding position in the 1D state
-      ;;update-1d-state-from-2d-patch p
     ]
     display
   ] [
@@ -236,7 +226,7 @@ end
 
 to update-1d-patches
   ;; very different from the base model since
-  ;; in that model patch status is the acutal state.
+  ;; in that model, the patch status is the acutal state.
 
   ;; here, we use current-state and the current-1d-position to update the 1D display
   ;; we should display the most recent grid-side of the 1D state based on the current-1d-position
@@ -369,10 +359,10 @@ ticks
 15.0
 
 SLIDER
-120
-67
+117
+69
 276
-100
+102
 initial-density
 initial-density
 0.0
@@ -402,9 +392,9 @@ NIL
 
 BUTTON
 11
-204
+141
 114
-242
+176
 go-once
 go
 NIL
@@ -418,10 +408,10 @@ NIL
 0
 
 BUTTON
-122
-204
-225
-242
+12
+179
+115
+217
 go-forever
 go
 T
@@ -435,10 +425,10 @@ NIL
 0
 
 BUTTON
-131
-274
-227
-307
+179
+215
+275
+248
 recolor
 ifelse living?\n  [ set pcolor fgcolor ]\n  [ set pcolor bgcolor ]
 NIL
@@ -452,10 +442,10 @@ NIL
 0
 
 MONITOR
-12
-248
-115
-293
+713
+66
+816
+111
 current density
 count patches with\n  [living?]\n/ count patches
 2
@@ -480,20 +470,20 @@ NIL
 1
 
 TEXTBOX
-124
-125
-283
-193
-When this button is down,\nyou can add or remove\ncells by holding down\nthe mouse button\nand \"drawing\".
+713
+128
+872
+226
+When this button is down,\nyou can add or remove\ncells by holding down\nthe mouse button\nand \"drawing\". \nUnpredictable if used while running.
 11
 0.0
 0
 
 BUTTON
-10
-167
-113
-202
+712
+230
+815
+265
 NIL
 draw-cells
 T
@@ -507,21 +497,21 @@ NIL
 1
 
 INPUTBOX
-72
-307
-227
-367
+120
+248
+275
+308
 fgcolor
-123.0
+11.0
 1
 0
 Color
 
 INPUTBOX
-72
-369
-227
-429
+120
+310
+275
+370
 bgcolor
 79.0
 1
@@ -529,12 +519,12 @@ bgcolor
 Color
 
 INPUTBOX
-72
-430
-227
-490
+120
+371
+275
+431
 border-color
-98.0
+96.0
 1
 0
 Color
@@ -557,10 +547,10 @@ NIL
 1
 
 SWITCH
-286
-456
-414
-489
+356
+441
+484
+474
 update-1d?
 update-1d?
 0
@@ -568,10 +558,10 @@ update-1d?
 -1000
 
 TEXTBOX
-418
-457
-567
-499
+488
+442
+637
+484
 Faster when off; but, you know: way less cool.
 11
 124.0
