@@ -195,7 +195,7 @@ to update-1d-patches
 end
 
 to update-2d-patches
-  
+
 end
 
 to cell-birth   ;;; from the base model
@@ -425,11 +425,11 @@ Color
 
 INPUTBOX
 119
-493
+432
 274
-553
+492
 border-color
-123.0
+98.0
 1
 0
 Color
