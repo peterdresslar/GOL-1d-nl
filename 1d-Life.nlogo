@@ -79,7 +79,7 @@ patches-own [
   living?         ;; indicates if the cell is living
   is-1d-cell      ;; PDD: Is this patch part of the 1d grid?
   is-border-cell  ;; PDD: Is this patch a border cell?
-  mapping   ;; should not need it!
+  mapping   ;; should not need i, but i did. kind of cheating.
 ]
 
 
@@ -330,13 +330,13 @@ to-report evaluate
   ifelse (prev-self = 1)
   [
     ifelse (prev-neighbors = 2 or prev-neighbors = 3)
-      [ report 1 ] ;; Survive
-      [ report 0 ] ;; Die (loneliness or overcrowding)
+      [ report 1 ]
+      [ report 0 ]
   ]
   [
     ifelse (prev-neighbors = 3)
-      [ report 1 ] ;; Born
-      [ report 0 ] ;; Stay dead
+      [ report 1 ]
+      [ report 0 ]
   ]
 end
 
