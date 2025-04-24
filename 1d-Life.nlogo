@@ -76,6 +76,7 @@ patches-own [
   living?         ;; indicates if the cell is living
   is-1d-cell      ;; PDD: Is this patch part of the 1d grid?
   is-border-cell  ;; PDD: Is this patch a border cell?
+  mapping   ;; should not need it!
 ]
 
 
@@ -99,6 +100,8 @@ to setup-blank
   set previous-state (n-values grid-squared [0])
 
   set current-1d-position grid-squared
+
+  map-patches
 
   update-1d-patches
   update-2d-patches
@@ -133,8 +136,10 @@ to setup-random
 
   set current-1d-position grid-squared
 
-  ;; output-print current-state
+  output-print current-state
   ;; output-print previous-state
+
+  map-patches
 
   update-1d-patches
   update-2d-patches
@@ -143,6 +148,37 @@ to setup-random
   set current-density (sum current-state / grid-squared)
 
   reset-ticks
+end
+
+to setup-test
+  setup-blank
+  let glider1 floor(grid-squared / 2)
+  let glider2 glider1 + grid-side + 1
+  let glider3 glider1 + grid-side + grid-side - 1
+  let glider4 glider1 + grid-side + grid-side
+  let glider5 glider1 + grid-side + grid-side + 1
+  ;; "parity" bits
+  let glider6 grid-squared - 2
+  let glider7 2
+
+  let glider11 glider1 - 1234
+  let glider12 glider11 + grid-side + 1
+  let glider13 glider11 + grid-side + grid-side - 1
+  let glider14 glider11 + grid-side + grid-side
+  let glider15 glider11 + grid-side + grid-side + 1
+
+  let glider-coords (list glider1 glider2 glider3 glider4 glider5 glider6 glider7 glider11 glider12 glider13 glider14 glider15)
+
+
+  ;; update the current-state using glider-list as indices to set to 1
+  foreach glider-coords [ idx ->
+    output-print idx
+    set current-state replace-item idx current-state 1
+  ]
+  output-print current-state
+  update-1d-patches
+  update-2d-patches
+
 end
 
 to setup-border
@@ -156,6 +192,21 @@ to setup-border
   ask patches with [ pycor = max-pycor - 1 ] [
     set is-border-cell true
     cell-border
+  ]
+end
+
+to map-patches
+  ;; -50, 50: current state pos[0]
+  ;; 50, 50: current state pos [grid-side]
+  ;; 0, 0: current state pos [(grid-side * grid-side / 2) + (grid-side / 2) + 1]
+  ;; -50, -50: current state pos [(grid-side * grid-side) - grid-side]
+  ;; 50, -50: current state pos [(grid-side * grid-side) - 1]
+  let body-top max-pycor - 2
+  let half-grid floor (grid-side / 2)
+  ask patches with [not is-border-cell and not is-1d-cell] [
+    let row body-top - pycor
+    let col pxcor + half-grid
+    set mapping row * grid-side + col
   ]
 end
 
@@ -211,16 +262,10 @@ to update-1d-patches
 end
 
 to update-2d-patches
-  let half-grid floor (grid-side / 2)
-  ask patches with [ not is-border-cell and not is-1d-cell ] [
-    ;; -50, 50: current state pos[0]
-    ;; 50, 50: current state pos [grid-side]
-    ;; 0, 0: current state pos [(grid-side * grid-side / 2) + (grid-side / 2) + 1]
-    ;; -50, -50: current state pos [(grid-side * grid-side) - grid-side]
-    ;; 50, -50: current state pos [(grid-side * grid-side) - 1]
-    let this-idx ((pxcor + half-grid + 1) * ((-1 * pycor) + half-grid + 1)) - 1  ;; holy smokes but it works
-
-    ifelse (item this-idx (current-state) = 1)  [ cell-birth ] [ cell-death ]  ;; just a cool netlogo conditional
+  ask patches with [not is-border-cell and not is-1d-cell] [
+    ifelse (item mapping current-state) = 1  ;; mapping is from patch to 1d state
+      [ cell-birth ]
+      [ cell-death ]
   ]
   display
 end
@@ -433,10 +478,10 @@ When this button is down,\nyou can add or remove\ncells by holding down\nthe mou
 0
 
 BUTTON
-9
-134
-112
-169
+10
+167
+113
+202
 NIL
 draw-cells
 T
@@ -481,6 +526,23 @@ border-color
 1
 0
 Color
+
+BUTTON
+11
+108
+113
+141
+NIL
+setup-test
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
