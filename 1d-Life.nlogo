@@ -374,9 +374,9 @@ ticks
 15.0
 
 SLIDER
-117
+118
 69
-276
+277
 102
 initial-density
 initial-density
