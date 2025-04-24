@@ -141,7 +141,7 @@ to setup-random
 
   set current-1d-position lambda-squared
 
-  output-print current-state
+  ;; output-print current-state
   ;; output-print previous-state
 
   map-patches
@@ -177,10 +177,10 @@ to setup-test   ;;; just some arbitary gliders, this could be made more fun.
 
   ;; update the current-state using glider-list as indices to set to 1
   foreach glider-coords [ idx ->
-    output-print idx
+    ;; output-print idx
     set current-state replace-item idx current-state 1
   ]
-  output-print current-state
+  ;; output-print current-state
   update-1d-patches
   update-2d-patches
 
