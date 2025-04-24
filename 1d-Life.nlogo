@@ -299,7 +299,7 @@ to go
     let state-pos evaluate
     set current-state (lput state-pos current-state)
     set current-1d-position (current-1d-position + 1)
-    update-1d-patches
+    if update-1d? [ update-1d-patches ]   ;;; can toggle off for speed
   ]
 
   update-2d-patches
@@ -435,10 +435,10 @@ NIL
 0
 
 BUTTON
-178
-276
+131
 274
-309
+227
+307
 recolor
 ifelse living?\n  [ set pcolor fgcolor ]\n  [ set pcolor bgcolor ]
 NIL
@@ -507,10 +507,10 @@ NIL
 1
 
 INPUTBOX
-119
-309
-274
-369
+72
+307
+227
+367
 fgcolor
 123.0
 1
@@ -518,10 +518,10 @@ fgcolor
 Color
 
 INPUTBOX
-119
-371
-274
-431
+72
+369
+227
+429
 bgcolor
 79.0
 1
@@ -529,10 +529,10 @@ bgcolor
 Color
 
 INPUTBOX
-119
-432
-274
-492
+72
+430
+227
+490
 border-color
 98.0
 1
@@ -554,6 +554,37 @@ NIL
 NIL
 NIL
 NIL
+1
+
+SWITCH
+286
+456
+414
+489
+update-1d?
+update-1d?
+0
+1
+-1000
+
+TEXTBOX
+418
+457
+567
+499
+Faster when off; but, you know: way less cool.
+11
+124.0
+1
+
+TEXTBOX
+700
+10
+850
+28
+<--processing in 1D
+11
+0.0
 1
 
 @#$#@#$#@
