@@ -1,22 +1,33 @@
-;; I've wound up rather re-writing the model due to the 2D -> 1D -> 2D processing.
+;; 1d-Life.nlogo
 
+;; This model is a 1D implementation of Conway's Game of Life based on the 2D model "life.nlogo"
+;; by Uri Wilensky.
 
-;; fundamentally: 1D GOL takes the 2D finite domain and maps it to a 1D tape.
-;; Assuming a 2D finite domain bounded by sides n and n, the 1D tape length is of course n*n,
-;; which we will call N.
+;; Due to constraints on state management specifically, this model is significantly rewritten.
+;; Instead of storing state in the patches, we have to store it in a global data structure,
+;; though this is more or less solely due to the constraint of physical 1-dimensional space within
+;; the user interface. Of course, the 1D mapping of a 2D grid of any size gets very wide (or tall).
+;; And, we donʻt have "off-screen" patches. (Not that I am aware of, at least.)
 
-;; we should specific that we (arbitrarily) perform the mapping of the 1D state to the 2D state
-;; in the order of left to right, top to bottom.
+;; Despite the state management lists, very little else about the model has been changed.
 
+;; Fundamentally: 1D GOL takes the 2D finite domain and maps it to a 1D tape.
+;; Assuming a 2D finite domain bounded by sides n and n, the 1D tape length is of course n*n.
 
+;; It turns out that in 1 dimension, our CA operates perfectly well, and can be thought of as independent of the 2D
+;; finite domain. But, we still need that side length to operate. For reasons that may become clear, we will call
+;; this side length λ (`lambda`) where we use it in the code. We will call the square of this side-length Λ (for simplicity `lambda-squared`).
 
+;; While the 1D processing could work on its own, we should specifically mention that we are arbitrarily mapping
+;; back from the 1D state to the 2D state in the order of left to right, top to bottom.
 
+;;; Here is a discussion of the conversion of the 2 dimensional finite domain to a 1D automaton:
 ;; for convenience, letʻs use "keypad" style coordinates when referring to the 2D neighbors.
 ;; the neighbors are:
 ;; 7 8 9
 ;; 4 5 6
 ;; 1 2 3
-;; where 5 is actually the prior state.
+;; where 5 is the prior state itself.
 
 ;; Let `s` be the index (0 to N-1) of the cell being processed for the current time step `t`.
 ;; N = n*n is the total number of cells (grid-size * grid-size).
@@ -27,7 +38,10 @@
 ;; s[t-1] is simply the value at index `s` in the previous state list:
 ;; s[t-1] = S_prev[s_idx] (equates to s-N)
 
-;; The indices for the 8 neighbors in S_prev, relative to `s`, are calculated using the grid-side dimension `n` and the grid-size `N`
+;; There is a bit of a trick here, though! It is possible for us to go "off the end" of the tape when looking for neighbors.
+;; In order to deal with this complication, we need our arithmetic to wrap values "around" to the other end of the tape.
+;; (Note this is only true since we are mapping to )
+;;The indices for the 8 neighbors in S_prev, relative to `s`, are calculated using the grid-side dimension `n` and the grid-size `N`
 ;; and wrapped using modulo `N`.
 ;; We use `(index + N) mod N` to handle potential negative results (off tape low or high) correctly.
 ;; Keypad indices map to S_prev indices as follows:
@@ -46,6 +60,7 @@
 ;; and then adopting the rules of Conway's Game of Life:
 ;; s[t] = 1 if (s[t-1] = 1 and Neighbors(t-1) is 2 or 3) or (s[t-1] = 0 and Neighbors(t-1) = 3)
 ;; s[t] = 0 otherwise.
+;;; End discussion
 
 
 ;;;; HOUSEKEEPING
