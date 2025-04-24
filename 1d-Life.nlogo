@@ -41,7 +41,7 @@
 ;; There is a bit of a trick here, though! It is possible for us to go "off the end" of the tape when looking for neighbors.
 ;; In order to deal with this complication, we need our arithmetic to wrap values "around" to the other end of the tape.
 ;; (Note this is only true since we are mapping to )
-;;The indices for the 8 neighbors in S_prev, relative to `s`, are calculated using the grid-side dimension `n` and the grid-size `N`
+;;The indices for the 8 neighbors in S_prev, relative to `s`, are calculated using the lambda dimension `n` and the grid-size `N`
 ;; and wrapped using modulo `N`.
 ;; We use `(index + N) mod N` to handle potential negative results (off tape low or high) correctly.
 ;; Keypad indices map to S_prev indices as follows:
@@ -67,8 +67,8 @@
 
 globals [
   erasing?        ;; from the base model. used to toggle erasing mode--not sure if we can keep this.
-  grid-side       ;; how to make this work with GRAPHICS-WINDOW?
-  grid-squared    ;; grid-side * grid-side
+  lambda       ;; how to make this work with GRAPHICS-WINDOW?
+  lambda-squared    ;; lambda * lambda
   current-state     ;; 1d state of the grid, could get pretty big.
   previous-state    ;; 1d state of the grid, could get pretty big.
   current-1d-position     ;; current place in the tape
@@ -88,8 +88,8 @@ patches-own [
 to setup-blank
   clear-all
 
-  set grid-side 101  ;; n
-  set grid-squared (grid-side * grid-side) ;; N
+  set lambda 101  ;; n
+  set lambda-squared (lambda * lambda) ;; N
   ask patches [ cell-death ]
 
   setup-border
@@ -100,18 +100,18 @@ to setup-blank
   set current-state []
   set previous-state []
 
-  set current-state (n-values grid-squared [0])
-  set previous-state (n-values grid-squared [0])
+  set current-state (n-values lambda-squared [0])
+  set previous-state (n-values lambda-squared [0])
 
-  set current-1d-position grid-squared
+  set current-1d-position lambda-squared
 
   map-patches
 
   update-1d-patches
   update-2d-patches
 
-  ;; set current density by summing current-state and dividing by grid-squared
-  set current-density (sum current-state / grid-squared)
+  ;; set current density by summing current-state and dividing by lambda-squared
+  set current-density (sum current-state / lambda-squared)
 
   reset-ticks
 end
@@ -121,8 +121,8 @@ end
 to setup-random
   clear-all
 
-  set grid-side 101  ;; n
-  set grid-squared (grid-side * grid-side) ;; N
+  set lambda 101  ;; n
+  set lambda-squared (lambda * lambda) ;; N
 
   ask patches [ cell-death ]
 
@@ -134,12 +134,12 @@ to setup-random
   set current-state []
   set previous-state []
 
-  set current-state n-values grid-squared [
+  set current-state n-values lambda-squared [
     ifelse-value (random-float 100.0 < initial-density) [ 1 ] [ 0 ]
   ]
-  set previous-state (n-values grid-squared [0])
+  set previous-state (n-values lambda-squared [0])
 
-  set current-1d-position grid-squared
+  set current-1d-position lambda-squared
 
   output-print current-state
   ;; output-print previous-state
@@ -149,28 +149,28 @@ to setup-random
   update-1d-patches
   update-2d-patches
 
-  ;; set current density by summing current-state and dividing by grid-squared
-  set current-density (sum current-state / grid-squared)
+  ;; set current density by summing current-state and dividing by lambda-squared
+  set current-density (sum current-state / lambda-squared)
 
   reset-ticks
 end
 
 to setup-test   ;;; just some arbitary gliders, this could be made more fun.
   setup-blank
-  let glider1 floor(grid-squared / 2)
-  let glider2 glider1 + grid-side + 1
-  let glider3 glider1 + grid-side + grid-side - 1
-  let glider4 glider1 + grid-side + grid-side
-  let glider5 glider1 + grid-side + grid-side + 1
+  let glider1 floor(lambda-squared / 2)
+  let glider2 glider1 + lambda + 1
+  let glider3 glider1 + lambda + lambda - 1
+  let glider4 glider1 + lambda + lambda
+  let glider5 glider1 + lambda + lambda + 1
   ;; "parity" bits
-  let glider6 grid-squared - 2
+  let glider6 lambda-squared - 2
   let glider7 2
 
   let glider11 glider1 - 1234
-  let glider12 glider11 + grid-side + 1
-  let glider13 glider11 + grid-side + grid-side - 1
-  let glider14 glider11 + grid-side + grid-side
-  let glider15 glider11 + grid-side + grid-side + 1
+  let glider12 glider11 + lambda + 1
+  let glider13 glider11 + lambda + lambda - 1
+  let glider14 glider11 + lambda + lambda
+  let glider15 glider11 + lambda + lambda + 1
 
   let glider-coords (list glider1 glider2 glider3 glider4 glider5 glider6 glider7 glider11 glider12 glider13 glider14 glider15)
 
@@ -202,16 +202,16 @@ end
 
 to map-patches
   ;; -50, 50: current state pos[0]
-  ;; 50, 50: current state pos [grid-side]
-  ;; 0, 0: current state pos [(grid-side * grid-side / 2) + (grid-side / 2) + 1]
-  ;; -50, -50: current state pos [(grid-side * grid-side) - grid-side]
-  ;; 50, -50: current state pos [(grid-side * grid-side) - 1]
+  ;; 50, 50: current state pos [lambda]
+  ;; 0, 0: current state pos [(lambda * lambda / 2) + (lambda / 2) + 1]
+  ;; -50, -50: current state pos [(lambda * lambda) - lambda]
+  ;; 50, -50: current state pos [(lambda * lambda) - 1]
   let body-top max-pycor - 2
-  let half-grid floor (grid-side / 2)
+  let half-grid floor (lambda / 2)
   ask patches with [not is-border-cell and not is-1d-cell] [
     let row body-top - pycor
     let col pxcor + half-grid
-    set mapping row * grid-side + col
+    set mapping row * lambda + col
   ]
 end
 
@@ -244,17 +244,17 @@ to update-1d-patches
   ;; in that model, the patch status is the acutal state.
 
   ;; here, we use current-state and the current-1d-position to update the 1D display
-  ;; we should display the most recent grid-side of the 1D state based on the current-1d-position
+  ;; we should display the most recent lambda of the 1D state based on the current-1d-position
 
-  let bookmark (max list (current-1d-position - grid-side) 0)
+  let bookmark (max list (current-1d-position - lambda) 0)
 
   let state-view sublist current-state bookmark current-1d-position
   ;; we need to work entirely with the max pycor row
 
   ;; for our pxcor values, we need to start on the negative side of the axis and work to the positive side.
-  ;; the negative side is -1 * (floor(grid-side / 2)
+  ;; the negative side is -1 * (floor(lambda / 2)
 
-  let i -1 * (floor grid-side / 2)
+  let i -1 * (floor lambda / 2)
   foreach state-view [ state ->
     ifelse ( state = 1 ) [
       ask patch i max-pycor [ cell-birth ]
@@ -300,7 +300,7 @@ to go
   set current-state []
   set current-1d-position 0
 
-  while [ current-1d-position < grid-squared ] [
+  while [ current-1d-position < lambda-squared ] [
     let state-pos evaluate
     set current-state (lput state-pos current-state)
     set current-1d-position (current-1d-position + 1)
@@ -309,21 +309,21 @@ to go
 
   update-2d-patches
 
-  ;; set current density by summing current-state and dividing by grid-squared
-  set current-density (sum current-state / grid-squared)
+  ;; set current density by summing current-state and dividing by lambda-squared
+  set current-density (sum current-state / lambda-squared)
   tick
 end
 
 to-report evaluate
   let prev-neighbors
-    (item ((current-1d-position - grid-side - 1 + grid-squared) mod grid-squared) previous-state) +    ;; 7
-    (item ((current-1d-position - grid-side + grid-squared) mod grid-squared) previous-state) +        ;; 8
-    (item ((current-1d-position - grid-side + 1 + grid-squared) mod grid-squared) previous-state) +    ;; 9
-    (item ((current-1d-position - 1 + grid-squared) mod grid-squared) previous-state) +                ;; 4
-    (item ((current-1d-position + 1 + grid-squared) mod grid-squared) previous-state) +                ;; 6
-    (item ((current-1d-position + grid-side - 1 + grid-squared) mod grid-squared) previous-state) +    ;; 1
-    (item ((current-1d-position + grid-side + grid-squared) mod grid-squared) previous-state) +        ;; 2
-    (item ((current-1d-position + grid-side + 1 + grid-squared) mod grid-squared) previous-state)      ;; 3
+    (item ((current-1d-position - lambda - 1 + lambda-squared) mod lambda-squared) previous-state) +    ;; 7
+    (item ((current-1d-position - lambda + lambda-squared) mod lambda-squared) previous-state) +        ;; 8
+    (item ((current-1d-position - lambda + 1 + lambda-squared) mod lambda-squared) previous-state) +    ;; 9
+    (item ((current-1d-position - 1 + lambda-squared) mod lambda-squared) previous-state) +                ;; 4
+    (item ((current-1d-position + 1 + lambda-squared) mod lambda-squared) previous-state) +                ;; 6
+    (item ((current-1d-position + lambda - 1 + lambda-squared) mod lambda-squared) previous-state) +    ;; 1
+    (item ((current-1d-position + lambda + lambda-squared) mod lambda-squared) previous-state) +        ;; 2
+    (item ((current-1d-position + lambda + 1 + lambda-squared) mod lambda-squared) previous-state)      ;; 3
   let prev-self item current-1d-position previous-state                                                ;; 5
 
   ;; now apply the rules of GOL -- totally the same here as in 2D, just finding neighbors is different
@@ -423,9 +423,9 @@ NIL
 0
 
 BUTTON
-12
+11
 179
-115
+114
 217
 go-forever
 go
@@ -440,10 +440,10 @@ NIL
 0
 
 BUTTON
-179
-215
-275
-248
+1015
+40
+1170
+73
 recolor
 ifelse living?\n  [ set pcolor fgcolor ]\n  [ set pcolor bgcolor ]
 NIL
@@ -457,10 +457,10 @@ NIL
 0
 
 MONITOR
-713
-66
-816
-111
+710
+386
+813
+431
 current density
 count patches with\n  [living?]\n/ count patches
 2
@@ -485,20 +485,20 @@ NIL
 1
 
 TEXTBOX
-713
-128
-872
-226
+120
+247
+279
+345
 When this button is down,\nyou can add or remove\ncells by holding down\nthe mouse button\nand \"drawing\". \nUnpredictable if used while running.
 11
 0.0
 0
 
 BUTTON
-712
-230
-815
-265
+10
+246
+113
+281
 NIL
 draw-cells
 T
@@ -512,10 +512,10 @@ NIL
 1
 
 INPUTBOX
-120
-248
-275
-308
+1015
+73
+1170
+133
 fgcolor
 11.0
 1
@@ -523,10 +523,10 @@ fgcolor
 Color
 
 INPUTBOX
-120
-310
-275
-370
+1015
+135
+1170
+195
 bgcolor
 79.0
 1
@@ -534,10 +534,10 @@ bgcolor
 Color
 
 INPUTBOX
-120
-371
-275
-431
+1015
+196
+1170
+256
 border-color
 96.0
 1
@@ -575,7 +575,7 @@ update-1d?
 TEXTBOX
 488
 442
-637
+668
 484
 Faster when off; but, you know: way less cool.
 11
@@ -588,6 +588,26 @@ TEXTBOX
 850
 28
 <--processing in 1D
+11
+0.0
+1
+
+TEXTBOX
+1029
+10
+1179
+38
+From the original model: (with new border-color)
+11
+0.0
+1
+
+TEXTBOX
+702
+215
+895
+257
+<--representation in 2D: for subjective experiences of humans and other experiencers
 11
 0.0
 1
