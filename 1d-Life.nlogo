@@ -74,6 +74,7 @@ globals [
 patches-own [
   living?         ;; indicates if the cell is living
   is-1d-cell      ;; PDD: Is this patch part of the 1d grid?
+  is-border-cell  ;; PDD: Is this patch a border cell?
 ]
 
 
@@ -84,6 +85,9 @@ to setup-blank
   set grid-side 101  ;; n
   set grid-squared (grid-side * grid-side) ;; N
   ask patches [ cell-death ]
+
+  setup-border
+
   ;; here we will convert the base model procedure to our terms; initalize the 1d state and then
   ;; update 2d based on 1d statae
 
@@ -109,6 +113,9 @@ to setup-random
   set grid-squared (grid-side * grid-side) ;; N
 
   ask patches [ cell-death ]
+
+  setup-border
+
   ;; here we will convert the base model procedure to our terms; initalize the 1d state and then
   ;; update 2d based on 1d statae
 
@@ -127,6 +134,13 @@ to setup-random
   update-2d-patches
 
   reset-ticks
+end
+
+to setup-border
+  ask patches with [ pycor = max-pycor - 1 ] [
+    set is-border-cell true
+    cell-border
+  ]
 end
 
 to draw-cells  ;; From the old model, actually an input-setup function.
@@ -178,12 +192,10 @@ to update-1d-patches
     set i (i + 1)
 
   ]
-
-
 end
 
 to update-2d-patches
-  ;; TODO
+  
 end
 
 to cell-birth   ;;; from the base model
@@ -194,6 +206,11 @@ end
 to cell-death   ;;; from the base model
   set living? false
   set pcolor bgcolor
+end
+
+to cell-border ;;; not from anywhere
+  set living? false
+  set pcolor border-color
 end
 
 to go
@@ -402,6 +419,17 @@ INPUTBOX
 431
 bgcolor
 79.0
+1
+0
+Color
+
+INPUTBOX
+119
+493
+274
+553
+border-color
+123.0
 1
 0
 Color
