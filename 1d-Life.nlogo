@@ -69,6 +69,7 @@ globals [
   current-state     ;; 1d state of the grid, could get pretty big.
   previous-state    ;; 1d state of the grid, could get pretty big.
   current-1d-position     ;; current place in the tape
+  current-density   ;; for reporting, will be taken from state
 ]
 
 patches-own [
@@ -94,13 +95,16 @@ to setup-blank
   set current-state []
   set previous-state []
 
-  set current-state (n-values grid-squared [false])
-  set previous-state (n-values grid-squared [false])
+  set current-state (n-values grid-squared [0])
+  set previous-state (n-values grid-squared [0])
 
   set current-1d-position grid-squared
 
   update-1d-patches
   update-2d-patches
+
+  ;; set current density by summing current-state and dividing by grid-squared
+  set current-density (sum current-state / grid-squared)
 
   reset-ticks
 end
@@ -122,16 +126,21 @@ to setup-random
   set current-state []
   set previous-state []
 
-  set current-state (n-values grid-squared [(random-float 100.0 < initial-density)])  ;; use randome function from base model to fill current state.
-  set previous-state (n-values grid-squared [false])
+  set current-state n-values grid-squared [
+    ifelse-value (random-float 100.0 < initial-density) [ 1 ] [ 0 ]
+  ]
+  set previous-state (n-values grid-squared [0])
 
   set current-1d-position grid-squared
 
-  output-print current-state
-  output-print previous-state
+  ;; output-print current-state
+  ;; output-print previous-state
 
   update-1d-patches
   update-2d-patches
+
+  ;; set current density by summing current-state and dividing by grid-squared
+  set current-density (sum current-state / grid-squared)
 
   reset-ticks
 end
@@ -181,7 +190,7 @@ to update-1d-patches
   ;; here, we use current-state and the current-1d-position to update the 1D display
   ;; we should display the most recent grid-side of the 1D state based on the current-1d-position
 
-  let bookmark current-1d-position - grid-side
+  let bookmark (max list (current-1d-position - grid-side) 0)
 
   let state-view sublist current-state bookmark current-1d-position
   ;; we need to work entirely with the max pycor row
@@ -191,7 +200,7 @@ to update-1d-patches
 
   let i -1 * (floor grid-side / 2)
   foreach state-view [ state ->
-    ifelse state [
+    ifelse ( state = 1 ) [
       ask patch i max-pycor [ cell-birth ]
     ] [
       ask patch i max-pycor [ cell-death ]
@@ -209,9 +218,9 @@ to update-2d-patches
     ;; 0, 0: current state pos [(grid-side * grid-side / 2) + (grid-side / 2) + 1]
     ;; -50, -50: current state pos [(grid-side * grid-side) - grid-side]
     ;; 50, -50: current state pos [(grid-side * grid-side) - 1]
-    output_print([pxcor pycor] of self)
-    let idx ((max-pycor - pycor) * (max-pxcor - min-pxcor + 1)) + (pxcor - min-pxcor)
-    set living? item idx current-state
+    let this-idx ((pxcor + half-grid + 1) * ((-1 * pycor) + half-grid + 1)) - 1  ;; holy smokes but it works
+
+    ifelse (item this-idx (current-state) = 1)  [ cell-birth ] [ cell-death ]  ;; just a cool netlogo conditional
   ]
   display
 end
@@ -233,19 +242,40 @@ end
 
 to go
   ;; Process the next step in the 1D representation
-  ;;process-1d-step
+  ;; process-1d-step
+  ;; itʻs a cosmetic issue, but we want the 1d row to scroll "forward" (left to right)
+  ;; as we process each 1d cell.
 
-  ;; Update the 1D display row
- ;; update-1d-display
+  set previous-state current-state
+  set current-state []
+  set current-1d-position 0
 
-  ;; Periodically update the 2D display (every grid-size^2 steps)
-  if ticks mod (grid-squared) = 0 and ticks > 0 [
-    ;;update-2d-from-1d
-
-    ;;dump-current-frame
+  while [ current-1d-position < grid-squared ] [
+    let state-pos evaluate
+    set current-state (lput state-pos current-state)
+    set current-1d-position (current-1d-position + 1)
+    update-1d-patches
   ]
 
+  update-2d-patches
+
+  ;; set current density by summing current-state and dividing by grid-squared
+  set current-density (sum current-state / grid-squared)
   tick
+end
+
+to-report evaluate
+  let prev-neighbors
+    (item ((current-1d-position - grid-side - 1 + grid-squared) mod grid-squared) previous-state) +
+    (item ((current-1d-position - grid-side + grid-squared) mod grid-squared) previous-state) +
+    (item ((current-1d-position - grid-side + 1 + grid-squared) mod grid-squared) previous-state) +
+    (item ((current-1d-position - 1 + grid-squared) mod grid-squared) previous-state) +
+    (item ((current-1d-position + 1 + grid-squared) mod grid-squared) previous-state) +
+    (item ((current-1d-position + grid-side - 1 + grid-squared) mod grid-squared) previous-state) +
+    (item ((current-1d-position + grid-side + grid-squared) mod grid-squared) previous-state) +
+    (item ((current-1d-position + grid-side + 1 + grid-squared) mod grid-squared) previous-state)
+  let prev-self item current-1d-position previous-state
+  ifelse (prev-self = 1 and prev-neighbors = 2) or (prev-self = 0 and prev-neighbors = 3) [ report 1 ] [ report 0 ]
 end
 
 
@@ -258,7 +288,7 @@ GRAPHICS-WINDOW
 285
 10
 697
-427
+431
 -1
 -1
 4.0
@@ -274,7 +304,7 @@ GRAPHICS-WINDOW
 -50
 50
 -50
-51
+52
 0
 0
 1
