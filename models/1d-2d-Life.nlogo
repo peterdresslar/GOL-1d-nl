@@ -366,8 +366,8 @@ GRAPHICS-WINDOW
 1
 1
 0
-1
-1
+0
+0
 1
 -50
 50
@@ -1071,8 +1071,8 @@ NetLogo 6.4.0
   <experiment name="1D2DLifeDensityWideSweep (wrapping OFF)" repetitions="20" runMetricsEveryStep="false">
     <setup>setup-random</setup>
     <go>go</go>
-        <timeLimit steps="200"/>
-
+    <timeLimit steps="200"/>
+    <metric>count patches with [living?] / count patches</metric>
     <enumeratedValueSet variable="initial-density">
       <value value="5"/>
       <value value="15"/>

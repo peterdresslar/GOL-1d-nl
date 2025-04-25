@@ -190,8 +190,8 @@ GRAPHICS-WINDOW
 1
 1
 0
-1
-1
+0
+0
 1
 0
 10200
@@ -901,6 +901,9 @@ NetLogo 6.4.0
       <value value="true"/>
       <value value="false"/>
     </enumeratedValueSet>
+    <enumeratedValueSet variable="lambda">
+      <value value="50"/>
+    </enumeratedValueSet>
   </experiment>
   <experiment name="1DLifeDensityWideSweep (wrapping ON)" repetitions="20" runMetricsEveryStep="true">
     <setup>setup-random</setup>
@@ -930,6 +933,7 @@ NetLogo 6.4.0
     <setup>setup-random</setup>
     <go>go</go>
     <timeLimit steps="200"/>
+    <metric>count patches with [living?] / count patches</metric>
     <enumeratedValueSet variable="initial-density">
       <value value="5"/>
       <value value="15"/>

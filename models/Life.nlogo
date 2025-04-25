@@ -706,6 +706,7 @@ NetLogo 6.4.0
     <setup>setup-random</setup>
     <go>go</go>
     <timeLimit steps="200"/>
+    <metric>count patches with [living?] / count patches</metric>
     <enumeratedValueSet variable="initial-density">
       <value value="5"/>
       <value value="15"/>
