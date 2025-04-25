@@ -85,8 +85,8 @@ GRAPHICS-WINDOW
 1
 1
 0
-1
-1
+0
+0
 1
 -50
 50
@@ -107,7 +107,7 @@ initial-density
 initial-density
 0.0
 100.0
-8.5
+35.0
 0.1
 1
 %
@@ -676,8 +676,8 @@ NetLogo 6.4.0
     <enumeratedValueSet variable="initial-density">
       <value value="33.33"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="--change-topology">
-      <value value="false"/>
+    <enumeratedValueSet variable="wrap?">
+      <value value="true"/>
       <value value="false"/>
     </enumeratedValueSet>
   </experiment>
@@ -698,12 +698,15 @@ NetLogo 6.4.0
       <value value="85"/>
       <value value="95"/>
     </enumeratedValueSet>
+    <enumeratedValueSet variable="wrap?">
+      <value value="true"/>
+    </enumeratedValueSet>
   </experiment>
-  <experiment name="DensityWideSweep (wrapping OFF)" repetitions="20" runMetricsEveryStep="false">
+  <experiment name="2DLifeDensityWideSweep (wrapping OFF)" repetitions="20" runMetricsEveryStep="false">
     <setup>setup-random</setup>
     <go>go</go>
     <enumeratedValueSet variable="initial-density">
-      <value value="8.5"/>
+      <value value="5"/>
       <value value="15"/>
       <value value="25"/>
       <value value="35"/>
@@ -713,6 +716,9 @@ NetLogo 6.4.0
       <value value="75"/>
       <value value="85"/>
       <value value="95"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="wrap?">
+      <value value="false"/>
     </enumeratedValueSet>
   </experiment>
 </experiments>
