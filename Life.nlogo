@@ -9,12 +9,14 @@ patches-own [
 
 to setup-blank
   clear-all
+  __change-topology wrap? wrap? ;;; control whether wrapping is on
   ask patches [ cell-death ]
   reset-ticks
 end
 
 to setup-random
   clear-all
+  __change-topology wrap? wrap?  ;;; control whether wrapping is on
   ask patches
     [ ifelse random-float 100.0 < initial-density
       [ cell-birth ]
@@ -76,7 +78,7 @@ GRAPHICS-WINDOW
 423
 -1
 -1
-4
+4.0
 1
 10
 1
@@ -94,7 +96,7 @@ GRAPHICS-WINDOW
 1
 1
 ticks
-15
+15.0
 
 SLIDER
 120
@@ -105,7 +107,7 @@ initial-density
 initial-density
 0.0
 100.0
-35
+8.5
 0.1
 1
 %
@@ -214,7 +216,7 @@ TEXTBOX
 193
 When this button is down,\nyou can add or remove\ncells by holding down\nthe mouse button\nand \"drawing\".
 11
-0
+0.0
 0
 
 BUTTON
@@ -240,7 +242,7 @@ INPUTBOX
 274
 369
 fgcolor
-123
+123.0
 1
 0
 Color
@@ -251,10 +253,22 @@ INPUTBOX
 274
 431
 bgcolor
-79
+79.0
 1
 0
 Color
+
+SWITCH
+11
+309
+101
+342
+wrap?
+wrap?
+0
+1
+-1000
+
 @#$#@#$#@
 ## WHAT IS IT?
 
@@ -653,18 +667,67 @@ NetLogo 6.4.0
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
+<experiments>
+  <experiment name="base" repetitions="2" runMetricsEveryStep="true">
+    <setup>setup-random</setup>
+    <go>go</go>
+    <timeLimit steps="200"/>
+    <metric>count patches with [living?] / count patches</metric>
+    <enumeratedValueSet variable="initial-density">
+      <value value="33.33"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="--change-topology">
+      <value value="false"/>
+      <value value="false"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="2DLifeDensityWideSweep (wrapping ON)" repetitions="20" runMetricsEveryStep="true">
+    <setup>setup-random</setup>
+    <go>go</go>
+    <timeLimit steps="200"/>
+    <metric>count patches with [living?] / count patches</metric>
+    <enumeratedValueSet variable="initial-density">
+      <value value="5"/>
+      <value value="15"/>
+      <value value="25"/>
+      <value value="35"/>
+      <value value="45"/>
+      <value value="55"/>
+      <value value="65"/>
+      <value value="75"/>
+      <value value="85"/>
+      <value value="95"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="DensityWideSweep (wrapping OFF)" repetitions="20" runMetricsEveryStep="false">
+    <setup>setup-random</setup>
+    <go>go</go>
+    <enumeratedValueSet variable="initial-density">
+      <value value="8.5"/>
+      <value value="15"/>
+      <value value="25"/>
+      <value value="35"/>
+      <value value="45"/>
+      <value value="55"/>
+      <value value="65"/>
+      <value value="75"/>
+      <value value="85"/>
+      <value value="95"/>
+    </enumeratedValueSet>
+  </experiment>
+</experiments>
 @#$#@#$#@
 @#$#@#$#@
 default
-0
--0.2 0 0 1
-0 1 1 0
-0.2 0 0 1
+0.0
+-0.2 0 0.0 1.0
+0.0 1 1.0 0.0
+0.2 0 0.0 1.0
 link direction
 true
 0
 Line -7500403 true 150 150 90 180
 Line -7500403 true 150 150 210 180
 @#$#@#$#@
-
+0
 @#$#@#$#@
