@@ -574,7 +574,7 @@ Please cite the NetLogo software as:
 
 And I am Peter Dresslar:
 
-* Dresslar, P. (2025). Netlogo 1d-Life-Infinite model. https://github.com/peterdresslar/GOL-1d-nl
+* Dresslar, P. (2025). Netlogo 1d-Life model. https://github.com/peterdresslar/GOL-1d-nl
 
 ## COPYRIGHT AND LICENSE
 

@@ -705,6 +705,7 @@ NetLogo 6.4.0
   <experiment name="2DLifeDensityWideSweep (wrapping OFF)" repetitions="20" runMetricsEveryStep="false">
     <setup>setup-random</setup>
     <go>go</go>
+    <timeLimit steps="200"/>
     <enumeratedValueSet variable="initial-density">
       <value value="5"/>
       <value value="15"/>
