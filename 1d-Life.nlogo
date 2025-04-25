@@ -1,85 +1,27 @@
-;; 1d-Life.nlogo
+;; 1d-Life-Infinite.nlogo
 
-;; This model is a 1D implementation of Conway's Game of Life based on the 2D model "life.nlogo"
-;; by Uri Wilensky.
+;; In this model, we entirely focus on the 1 dimensional model and are indifferent to the 2d mapping.
+;; "Infinite" is refers to the lack of any bounding of a state array, though of course we can only compute on a finite
+;; grid in NetLogo.
+;; Our model updates deterministically from any starting state and lambda: note that we must have a starting state and
+;; note also that many starting states are boring.
 
-;; Due to constraints on state management specifically, this model is significantly rewritten.
-;; Instead of storing state in the patches, we have to store it in a global data structure,
-;; though this is more or less solely due to the constraint of physical 1-dimensional space within
-;; the user interface. Of course, the 1D mapping of a 2D grid of any size gets very wide (or tall).
-;; And, we donʻt have "off-screen" patches. (Not that I am aware of, at least.)
+;; If we consider the model independent of any other dimensionality, we might see lambda as a frequency parameter. The rules are
+;; effectively "tuned" to lambda. Changing lambda while the model is running will cause durable patterns to change,
+;; and new patterns to emerge in a manner not entirely unlike the mechanism of resonance.
 
-;; Despite the state management lists, very little else about the model has been changed.
-
-;; Fundamentally: 1D GOL takes the 2D finite domain and maps it to a 1D tape.
-;; Assuming a 2D finite domain bounded by sides n and n, the 1D tape length is of course n*n.
-
-;; It turns out that in 1 dimension, our CA operates perfectly well, and can be thought of as independent of the 2D
-;; finite domain. But, we still need that side length to operate. For reasons that may become clear, we will call
-;; this side length λ (`lambda`) where we use it in the code. We will call the square of this side-length Λ (for simplicity `lambda-squared`).
-
-;; While the 1D processing could work on its own, we should specifically mention that we are arbitrarily mapping
-;; back from the 1D state to the 2D state in the order of left to right, top to bottom.
-
-;;; Here is a discussion of the conversion of the 2 dimensional finite domain to a 1D automaton:
-;; for convenience, letʻs use "keypad" style coordinates when referring to the 2D neighbors.
-;; the neighbors are:
-;; 7 8 9
-;; 4 5 6
-;; 1 2 3
-;; where 5 is the prior state itself.
-
-;; Let `s` be the index (0 to N-1) of the cell being processed for the current time step `t`.
-;; N = n*n is the total number of cells (grid-size * grid-size).
-;; We use two state lists: `S` (current state, corresponds to `one-d-state`) and `S_prev` (previous state, corresponds to `prev-one-d-state`).
-;; The state for cell `s` at time `t`, `s[t]`, is calculated based on values from `s[t-1]`.
-
-;; To calculate s[t], we need the state of cell `s` at time `t-1` (s[t-1]) and the states of its 8 neighbors at time `t-1` (Neighbors(t-1)).
-;; s[t-1] is simply the value at index `s` in the previous state list:
-;; s[t-1] = S_prev[s_idx] (equates to s-N)
-
-;; There is a bit of a trick here, though! It is possible for us to go "off the end" of the tape when looking for neighbors.
-;; In order to deal with this complication, we need our arithmetic to wrap values "around" to the other end of the tape.
-;; (Note this is only true since we are mapping to )
-;;The indices for the 8 neighbors in S_prev, relative to `s`, are calculated using the lambda dimension `n` and the grid-size `N`
-;; and wrapped using modulo `N`.
-;; We use `(index + N) mod N` to handle potential negative results (off tape low or high) correctly.
-;; Keypad indices map to S_prev indices as follows:
-;; 7: (s - n - 1 + N) mod N
-;; 8: (s - n + N) mod N
-;; 9: (s - n + 1 + N) mod N
-;; 4: (s - 1 + N) mod N
-;; 6: (s + 1 + N) mod N
-;; 1: (s + n - 1 + N) mod N
-;; 2: (s + n + N) mod N
-;; 3: (s + n + 1 + N) mod N
-
-;; Neighbors(t-1) is the sum of the values in S_prev at these 8 neighbor indices.
-;; Neighbors(t-1) = (item ((s-n-1+N) mod N) S_prev) + (item ((s-n+N) mod N) S_prev) + ... + (item ((s+n+1+N) mod N) S_prev)
-
-;; and then adopting the rules of Conway's Game of Life:
-;; s[t] = 1 if (s[t-1] = 1 and Neighbors(t-1) is 2 or 3) or (s[t-1] = 0 and Neighbors(t-1) = 3)
-;; s[t] = 0 otherwise.
-;;; End discussion
-
+;; We might also consider that the "known primitives" of game of life can be described here, in one dimension, using integer
+;; positions and lambda. The two setup-test procedures illustrate simple gliders that are examples of this.
 
 ;;;; HOUSEKEEPING
 
 globals [
-  erasing?        ;; from the base model. used to toggle erasing mode--not sure if we can keep this.
-  lambda       ;; how to make this work with GRAPHICS-WINDOW?
-  lambda-squared    ;; lambda * lambda
-  current-state     ;; 1d state of the grid, could get pretty big.
-  previous-state    ;; 1d state of the grid, could get pretty big.
-  current-1d-position     ;; current place in the tape
-  current-density   ;; for reporting, will be taken from state
+  erasing?     ;; 1d state of the grid, could get pretty big.
 ]
 
 patches-own [
   living?         ;; indicates if the cell is living
-  is-1d-cell      ;; PDD: Is this patch part of the 1d grid?
-  is-border-cell  ;; PDD: Is this patch a border cell?
-  mapping        ;; should not need this, but i did. kind of cheating.
+  live-neighbors
 ]
 
 
@@ -88,30 +30,9 @@ patches-own [
 to setup-blank
   clear-all
 
-  set lambda 101  ;; n
-  set lambda-squared (lambda * lambda) ;; N
+  __change-topology wrap? wrap? ;;; control whether wrapping is on
+
   ask patches [ cell-death ]
-
-  setup-border
-
-  ;; here we will convert the base model procedure to our terms; initalize the 1d state and then
-  ;; update 2d based on 1d statae
-
-  set current-state []
-  set previous-state []
-
-  set current-state (n-values lambda-squared [0])
-  set previous-state (n-values lambda-squared [0])
-
-  set current-1d-position lambda-squared
-
-  map-patches
-
-  update-1d-patches
-  update-2d-patches
-
-  ;; set current density by summing current-state and dividing by lambda-squared
-  set current-density (sum current-state / lambda-squared)
 
   reset-ticks
 end
@@ -121,158 +42,82 @@ end
 to setup-random
   clear-all
 
-  set lambda 101  ;; n
-  set lambda-squared (lambda * lambda) ;; N
+  __change-topology wrap? wrap? ;;; control whether wrapping is on
 
-  ask patches [ cell-death ]
-
-  setup-border
-
-  ;; here we will convert the base model procedure to our terms; initalize the 1d state and then
-  ;; update 2d based on 1d statae
-
-  set current-state []
-  set previous-state []
-
-  set current-state n-values lambda-squared [
-    ifelse-value (random-float 100.0 < initial-density) [ 1 ] [ 0 ]
-  ]
-  set previous-state (n-values lambda-squared [0])
-
-  set current-1d-position lambda-squared
-
-  ;; output-print current-state
-  ;; output-print previous-state
-
-  map-patches
-
-  update-1d-patches
-  update-2d-patches
-
-  ;; set current density by summing current-state and dividing by lambda-squared
-  set current-density (sum current-state / lambda-squared)
-
+  ask patches
+    [ ifelse random-float 100.0 < initial-density
+      [ cell-birth ]
+      [ cell-death ] ]
   reset-ticks
 end
 
 to setup-test   ;;; just some arbitary gliders, this could be made more fun.
   setup-blank
-  let glider1 floor(lambda-squared / 2)
-  let glider2 glider1 + lambda + 1
-  let glider3 glider1 + lambda + lambda - 1
-  let glider4 glider1 + lambda + lambda
-  let glider5 glider1 + lambda + lambda + 1
-  ;; "parity" bits
-  let glider6 lambda-squared - 2
-  let glider7 2
 
-  let glider11 glider1 - 1234
-  let glider12 glider11 + lambda + 1
-  let glider13 glider11 + lambda + lambda - 1
-  let glider14 glider11 + lambda + lambda
-  let glider15 glider11 + lambda + lambda + 1
-
-  let glider-coords (list glider1 glider2 glider3 glider4 glider5 glider6 glider7 glider11 glider12 glider13 glider14 glider15)
-
-
-  ;; update the current-state using glider-list as indices to set to 1
-  foreach glider-coords [ idx ->
-    ;; output-print idx
-    set current-state replace-item idx current-state 1
+  let glider1 patch 667 0
+  ask glider1 [
+      cell-birth
+      ask patch-at (lambda + 1) 0 [ cell-birth ]
+      ask patch-at (lambda + lambda - 1) 0 [ cell-birth ]
+      ask patch-at (lambda + lambda) 0 [ cell-birth ]
+      ask patch-at (lambda + lambda + 1) 0 [ cell-birth ]
   ]
-  ;; output-print current-state
-  update-1d-patches
-  update-2d-patches
+
+  let glider11 patch 333 0
+  ask glider11 [
+      cell-birth
+      ask patch-at (lambda + 1) 0 [ cell-birth ]
+      ask patch-at (lambda + lambda - 1) 0 [ cell-birth ]
+      ask patch-at (lambda + lambda) 0 [ cell-birth ]
+      ask patch-at (lambda + lambda + 1) 0 [ cell-birth ]
+  ]
+
+  reset-ticks
 
 end
 
-to setup-border
-  ask patches [
-    set is-1d-cell false
-    set is-border-cell false
+to setup-alt-test ;; just flip the other test. elegance, it is not
+  setup-blank
+
+  let glider1 patch 667 0
+  ask glider1 [
+      cell-birth
+      ask patch-at (-1 * (lambda + 1)) 0 [ cell-birth ]
+      ask patch-at (-1 * (lambda + lambda - 1)) 0 [ cell-birth ]
+      ask patch-at (-1 * (lambda + lambda)) 0 [ cell-birth ]
+      ask patch-at (-1 * (lambda + lambda + 1)) 0 [ cell-birth ]
   ]
-  ask patches with [ pycor = max-pycor ] [
-    set is-1d-cell true
+
+  let glider11 patch 333 0
+  ask glider11 [
+      cell-birth
+      ask patch-at (-1 * (lambda + 1)) 0 [ cell-birth ]
+      ask patch-at (-1 * (lambda + lambda - 1)) 0 [ cell-birth ]
+      ask patch-at (-1 * (lambda + lambda)) 0 [ cell-birth ]
+      ask patch-at (-1 * (lambda + lambda + 1)) 0 [ cell-birth ]
   ]
-  ask patches with [ pycor = max-pycor - 1 ] [
-    set is-border-cell true
-    cell-border
-  ]
+  reset-ticks
+
 end
 
-to map-patches
-  ;; -50, 50: current state pos[0]
-  ;; 50, 50: current state pos [lambda]
-  ;; 0, 0: current state pos [(lambda * lambda / 2) + (lambda / 2) + 1]
-  ;; -50, -50: current state pos [(lambda * lambda) - lambda]
-  ;; 50, -50: current state pos [(lambda * lambda) - 1]
-  let body-top max-pycor - 2
-  let half-grid floor (lambda / 2)
-  ask patches with [not is-border-cell and not is-1d-cell] [
-    let row body-top - pycor
-    let col pxcor + half-grid
-    set mapping row * lambda + col
-  ]
-end
 
-to draw-cells  ;; From the old model, actually an input-setup function.
+to draw-cells
   ifelse mouse-down? [
-    let p patch mouse-xcor mouse-ycor
-    if [not is-1d-cell and not is-border-cell] of p [
-      if erasing? = 0 [
-        set erasing? [living?] of p
-      ]
-      ask p [
-        ifelse erasing? [
-          cell-death
-        ] [
-          cell-birth
-        ]
-        ;; ... now we have to map BACK to 1d
-        let idx mapping
-        set current-state replace-item idx current-state (ifelse-value living? [1] [0])
+    if erasing? = 0 [
+      set erasing? [living?] of patch mouse-xcor mouse-ycor
+    ]
+    ask patch mouse-xcor mouse-ycor [
+      ifelse erasing? [
+        cell-death
+      ] [
+        cell-birth
       ]
     ]
     display
   ] [
     set erasing? 0
   ]
-end
 
-to update-1d-patches
-  ;; very different from the base model since
-  ;; in that model, the patch status is the acutal state.
-
-  ;; here, we use current-state and the current-1d-position to update the 1D display
-  ;; we should display the most recent lambda of the 1D state based on the current-1d-position
-
-  let bookmark (max list (current-1d-position - lambda) 0)
-
-  let state-view sublist current-state bookmark current-1d-position
-  ;; we need to work entirely with the max pycor row
-
-  ;; for our pxcor values, we need to start on the negative side of the axis and work to the positive side.
-  ;; the negative side is -1 * (floor(lambda / 2)
-
-  let i -1 * (floor lambda / 2)
-  foreach state-view [ state ->
-    ifelse ( state = 1 ) [
-      ask patch i max-pycor [ cell-birth ]
-    ] [
-      ask patch i max-pycor [ cell-death ]
-    ]
-    set i (i + 1)
-
-  ]
-end
-
-to update-2d-patches
-  ask patches with [not is-border-cell and not is-1d-cell] [
-    ifelse (item mapping current-state) = 1  ;; mapping is from patch to 1d state
-      [ cell-birth ]
-      [ cell-death ]
-  ]
-  display
 end
 
 to cell-birth   ;;; from the base model
@@ -285,60 +130,45 @@ to cell-death   ;;; from the base model
   set pcolor bgcolor
 end
 
-to cell-border ;;; not from anywhere
-  set living? false
-  set pcolor border-color
-end
-
 to go
-  ;; Process the next step in the 1D representation
-  ;; process-1d-step
-  ;; itʻs a cosmetic issue, but we want the 1d row to scroll "forward" (left to right)
-  ;; as we process each 1d cell.
+  ask patches
+    [ set live-neighbors evaluate-neighbors ]
 
-  set previous-state current-state
-  set current-state []
-  set current-1d-position 0
-
-  while [ current-1d-position < lambda-squared ] [
-    let state-pos evaluate
-    set current-state (lput state-pos current-state)
-    set current-1d-position (current-1d-position + 1)
-    if update-1d? [ update-1d-patches ]   ;;; can toggle off for speed
+  if log-evals? [
+    ask patches with [living?] [
+      output-print(word pxcor " " pycor " " live-neighbors)
+    ]
   ]
 
-  update-2d-patches
-
-  ;; set current density by summing current-state and dividing by lambda-squared
-  set current-density (sum current-state / lambda-squared)
+  ;; Starting a new "ask patches" here ensures that all the patches
+  ;; finish executing the first ask before any of them start executing
+  ;; the second ask.  This keeps all the patches in synch with each other,
+  ;; so the births and deaths at each generation all happen in lockstep.
+  ask patches
+    [ ifelse live-neighbors = 3
+      [ cell-birth ]
+      [ if live-neighbors != 2
+        [ cell-death ] ] ]
   tick
 end
 
-to-report evaluate
-  let prev-neighbors
-    (item ((current-1d-position - lambda - 1 + lambda-squared) mod lambda-squared) previous-state) +    ;; 7
-    (item ((current-1d-position - lambda + lambda-squared) mod lambda-squared) previous-state) +        ;; 8
-    (item ((current-1d-position - lambda + 1 + lambda-squared) mod lambda-squared) previous-state) +    ;; 9
-    (item ((current-1d-position - 1 + lambda-squared) mod lambda-squared) previous-state) +                ;; 4
-    (item ((current-1d-position + 1 + lambda-squared) mod lambda-squared) previous-state) +                ;; 6
-    (item ((current-1d-position + lambda - 1 + lambda-squared) mod lambda-squared) previous-state) +    ;; 1
-    (item ((current-1d-position + lambda + lambda-squared) mod lambda-squared) previous-state) +        ;; 2
-    (item ((current-1d-position + lambda + 1 + lambda-squared) mod lambda-squared) previous-state)      ;; 3
-  let prev-self item current-1d-position previous-state                                                ;; 5
+to-report evaluate-neighbors
+  ;; count neighbors with [living?]
+  let curr-neighbors (patch-set
+    ;; patch-at is east, north
+    patch-at (-1 * (lambda + 1)) 0   ;; 7
+    patch-at (-1 * lambda) 0        ;; 8
+    patch-at (-1 * (lambda - 1 )) 0   ;; 9
+    patch-at -1 0 ;; 4
+    patch-at 1 0 ;; 6
+    patch-at (lambda - 1) 0 ;; 1
+    patch-at lambda 0 ;; 2
+    patch-at (lambda + 1) 0 ;; 3
+    )
 
-  ;; now apply the rules of GOL -- totally the same here as in 2D, just finding neighbors is different
-  ifelse (prev-self = 1)
-  [
-    ifelse (prev-neighbors = 2 or prev-neighbors = 3)
-      [ report 1 ]
-      [ report 0 ]
-  ]
-  [
-    ifelse (prev-neighbors = 3)
-      [ report 1 ]
-      [ report 0 ]
-  ]
+  report count curr-neighbors with [living?]
 end
+
 
 
 
@@ -347,26 +177,26 @@ end
 ; See Info tab for full copyright and license.
 @#$#@#$#@
 GRAPHICS-WINDOW
-285
-10
-697
-431
+122
+31
+2132
+42
 -1
 -1
-4.0
+2.0
 1
 10
 1
 1
 1
 0
+0
+0
 1
-1
-1
--50
-50
--50
-52
+0
+1000
+0
+0
 0
 0
 1
@@ -374,9 +204,9 @@ ticks
 15.0
 
 SLIDER
-118
+122
 69
-277
+281
 102
 initial-density
 initial-density
@@ -407,9 +237,9 @@ NIL
 
 BUTTON
 11
-141
+196
 114
-176
+231
 go-once
 go
 NIL
@@ -424,9 +254,9 @@ NIL
 
 BUTTON
 11
-179
+234
 114
-217
+272
 go-forever
 go
 T
@@ -440,10 +270,10 @@ NIL
 0
 
 BUTTON
-1015
-40
-1170
-73
+1959
+268
+2114
+301
 recolor
 ifelse living?\n  [ set pcolor fgcolor ]\n  [ set pcolor bgcolor ]
 NIL
@@ -455,17 +285,6 @@ NIL
 NIL
 NIL
 0
-
-MONITOR
-710
-386
-813
-431
-current density
-count patches with\n  [living?]\n/ count patches
-2
-1
-11
 
 BUTTON
 11
@@ -485,20 +304,20 @@ NIL
 1
 
 TEXTBOX
-120
-247
-279
-345
-When this button is down,\nyou can add or remove\ncells by holding down\nthe mouse button\nand \"drawing\". \nUnpredictable if used while running.
+119
+278
+278
+376
+When this button is down,\nyou can add or remove\ncells by holding down\nthe mouse button\nand \"drawing\". 
 11
 0.0
 0
 
 BUTTON
 10
-246
+278
 113
-281
+313
 NIL
 draw-cells
 T
@@ -512,10 +331,10 @@ NIL
 1
 
 INPUTBOX
-1015
-73
-1170
-133
+1959
+301
+2114
+361
 fgcolor
 11.0
 1
@@ -523,32 +342,21 @@ fgcolor
 Color
 
 INPUTBOX
-1015
-135
-1170
-195
+1959
+363
+2114
+423
 bgcolor
 79.0
 1
 0
 Color
 
-INPUTBOX
-1015
-196
-1170
-256
-border-color
-96.0
-1
-0
-Color
-
 BUTTON
-11
-104
-113
-137
+12
+105
+114
+138
 NIL
 setup-test
 NIL
@@ -561,69 +369,127 @@ NIL
 NIL
 1
 
-SWITCH
-356
-441
-484
-474
-update-1d?
-update-1d?
-0
-1
--1000
-
 TEXTBOX
-488
-442
-668
-484
-Faster when off; but, you know: way less cool.
-11
-124.0
-1
-
-TEXTBOX
-700
-10
-850
-28
+2137
+30
+2287
+48
 <--processing in 1D
 11
 0.0
 1
 
 TEXTBOX
-1029
-10
-1179
-38
+1973
+238
+2123
+266
 From the original model: (with new border-color)
 11
 0.0
 1
 
+MONITOR
+1122
+121
+1180
+166
+density
+count patches with  [living?] / count patches
+4
+1
+11
+
+SLIDER
+1059
+65
+1231
+98
+lambda
+lambda
+2
+101
+11.0
+1
+1
+NIL
+HORIZONTAL
+
+SWITCH
+10
+401
+111
+434
+log-evals?
+log-evals?
+1
+1
+-1000
+
+BUTTON
+12
+142
+114
+176
+NIL
+setup-alt-test
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
 TEXTBOX
-702
-215
-895
-257
-<--representation in 2D: for subjective experiences of humans and other experiencers
+122
+124
+288
+166
+Tests will move quickly: try setting sim speed to \"slower\"
 11
 0.0
 1
 
+SWITCH
+11
+365
+101
+398
+wrap?
+wrap?
+0
+1
+-1000
+
 @#$#@#$#@
 ## WHAT IS IT?
 
-This program is an example of a two-dimensional cellular automaton.  This particular cellular automaton is called The Game of Life.
+This program is an example of a one-dimensional cellular automaton (1D-CA or CA). This particular CA was built as a 1D conversion of the well-known and elegantly-designed "Life" NetLogo model, itself based upon Conwayʻs Game of Life. Herein, we will keep some of the comments from the base model, and designate them with a >"comment" format, like as follows:
 
-A cellular automaton is a computational machine that performs actions based on certain rules.  It can be thought of as a board which is divided into cells (such as square cells of a checkerboard).  Each cell can be either "alive" or "dead."  This is called the "state" of the cell.  According to specified rules, each cell will be alive or dead at the next time step.
+>"A cellular automaton is a computational machine that performs actions based on certain rules.  It can be thought of as a board which is divided into cells (such as square cells of a checkerboard).  Each cell can be either "alive" or "dead."  This is called the "state" of the cell.  According to specified rules, each cell will be alive or dead at the next time step."
+
+While the original version of Life operates on two dimensions, using the standard NetLogo cartesian coordinate system, this version has compressed the basic rules that govern Life into ones that can operate on a one-dimensional system. It turns out that the rules themselves, or, the actual predicate algebra (listed below) work precisely the same in 1, 2, or likely any N dimensions. However, the way we assess the state of the one-dimensional version in order to feed data *into* the rules differs. Specifically, GOL rules require inputs from neighboring cells to operate on any given cell, and with our altered dimensionality the definition of neighboring changes.
+
+In another version of this model, we demonstrate a simple method of mapping from a finite two dimensional-grid to a one-dimensional array, and then we demonstrate the conversion of the neighbors into a function that uses both the side length (n) and the squared size (N) of the 2D grid to yield algebra for conversion to the 1D model. However, it can be observed in that model that the 1D model, once set up in this fashion, operates entirely independently from the two-dimensional version. In other words, it should be possible to operate the 1D version in a manner that ignores any other dimensionality.
+
+For this implementation, we say that we operate indifferently to the 2D version of the CA. Through this indifference, our need for the mapping parameter N (the square of the grid) is lifted. However, we still need a mechanism to define "neighbors" in our rules. We do this by converting our "side length" into a simple adjustable parameter, "lambda."
+
+Lamba works as a frequency "tuner" for the implementation, controlling the "spaced-ness" of the patterns and their operation on each other. Lambda must be set at the integer 2 or higher in order for the rules to operate as expected.
+
+We call this model "infinite" as there is no effective limit on the state to the left or right of the model other than screen size. This is specifically distinct from the alternate version of the model where we map cells back to two dimensions: with that need comes the constraint of having specific state frames.
+
+For contrast, this model could be set to be as "wide" as technology will allow. By default the model is set to have "wrapping" off--in this way, when patterns "read" the edge of the screen they encounter inactive, "dead" neighbors and nothing else. With wrapping on, motion will take place across the boundary from left to right or vice-versa. 
 
 ## HOW IT WORKS
 
-The rules of the game are as follows.  Each cell checks the state of itself and its eight surrounding neighbors and then sets itself to either alive or dead.  If there are less than two alive neighbors, then the cell dies.  If there are more than three alive neighbors, the cell dies.  If there are 2 alive neighbors, the cell remains in the state it is in.  If there are exactly three alive neighbors, the cell becomes alive. This is done in parallel and continues forever.
+>"The rules of the game are as follows.  Each cell checks the state of itself and its eight surrounding neighbors and then sets itself to either alive or dead.  If there are less than two alive neighbors, then the cell dies.  If there are more than three alive neighbors, the cell dies.  If there are 2 alive neighbors, the cell remains in the state it is in.  If there are exactly three alive neighbors, the cell becomes alive. This is done in parallel and continues forever."
 
-There are certain recurring shapes in Life, for example, the "glider" and the "blinker". The glider is composed of 5 cells which form a small arrow-headed shape, like this:
+In this version of the model, again, the rules are exactly the same, except that the location of the neighbors is set using lambda.
+
+>"There are certain recurring shapes in Life, for example, the "glider" and the "blinker". The glider is composed of 5 cells which form a small arrow-headed shape, like this:
 
 ```text
    O
@@ -631,41 +497,39 @@ There are certain recurring shapes in Life, for example, the "glider" and the "b
   OOO
 ```
 
-This glider will wiggle across the world, retaining its shape.  A blinker is a block of three cells (either up and down or left and right) that rotates between horizontal and vertical orientations.
+This glider will wiggle across the world, retaining its shape.  A blinker is a block of three cells (either up and down or left and right) that rotates between horizontal and vertical orientations."
+
+In this version of the model, these patterns do still exist, and can persist and move across the world analogously to how they do in two dimensions. They may not look as apparent to the observer, but they are there.
 
 ## HOW TO USE IT
 
-The INITIAL-DENSITY slider determines the initial density of cells that are alive.  SETUP-RANDOM places these cells.  GO-FOREVER runs the rule forever.  GO-ONCE runs the rule once.
+>"The INITIAL-DENSITY slider determines the initial density of cells that are alive.  SETUP-RANDOM places these cells.  GO-FOREVER runs the rule forever.  GO-ONCE runs the rule once.
 
-If you want to draw your own pattern, use the DRAW-CELLS button and then use the mouse to "draw" and "erase" in the view.
+If you want to draw your own pattern, use the DRAW-CELLS button and then use the mouse to "draw" and "erase" in the view."
+
+These controls work the same in this version. Try zooming in if you are drawing cells.
+
+Also available are the SETUP-TEST and SETUP-ALT-TEST buttons, which each set up a few simple glider patterns that should work to process across the screen. An excellent way to understand what is going on is to adjust the LAMBDA slider a few times and try clicking and executing one of these SETUP-TEST buttons after doing so.
 
 ## THINGS TO NOTICE
 
-Find some objects that are alive, but motionless.
+> "Find some objects that are alive, but motionless.
 
-Is there a "critical density" - one at which all change and motion stops/eternal motion begins?
+Is there a "critical density" - one at which all change and motion stops/eternal motion begins?"
 
 ## THINGS TO TRY
 
-Are there any recurring shapes other than gliders and blinkers?
-
-Build some objects that don't die (using DRAW-CELLS)
-
-How much life can the board hold and still remain motionless and unchanging? (use DRAW-CELLS)
-
-The glider gun is a large conglomeration of cells that repeatedly spits out gliders.  Find a "glider gun" (very, very difficult!).
+Here we will point out that one of the best things to try is to run this version and the base "Life" version side by side and to compare results.
 
 ## EXTENDING THE MODEL
 
-Give some different rules to life and see what happens.
+We have extended the model already, thank you.
 
-Experiment with using neighbors4 instead of neighbors (see below).
+N-D?
 
 ## NETLOGO FEATURES
 
-The neighbors primitive returns the agentset of the patches to the north, south, east, west, northeast, northwest, southeast, and southwest.  So `count neighbors with [living?]` counts how many of those eight patches have the `living?` patch variable set to true.
-
-`neighbors4` is like `neighbors` but only uses the patches to the north, south, east, and west.  Some cellular automata, like this one, are defined using the 8-neighbors rule, others the 4-neighbors.
+Note that the grid is setup with the Settings... button. Changes may or may not work.
 
 ## RELATED MODELS
 
@@ -680,7 +544,7 @@ CA 1D Rule 250 --- the basic rule 250 model
 
 ## CREDITS AND REFERENCES
 
-The Game of Life was invented by John Horton Conway.
+>" The Game of Life was invented by John Horton Conway.
 
 See also:
 
@@ -694,11 +558,11 @@ Martin Gardner, "Mathematical Games: On cellular automata, self-reproduction, th
 
 Berlekamp, Conway, and Guy, Winning Ways for your Mathematical Plays, Academic Press: New York, 1982.
 
-William Poundstone, The Recursive Universe, William Morrow: New York, 1985.
+William Poundstone, The Recursive Universe, William Morrow: New York, 1985."
 
 ## HOW TO CITE
 
-If you mention this model or the NetLogo software in a publication, we ask that you include the citations below.
+> "If you mention this model or the NetLogo software in a publication, we ask that you include the citations below.
 
 For the model itself:
 
@@ -706,11 +570,15 @@ For the model itself:
 
 Please cite the NetLogo software as:
 
-* Wilensky, U. (1999). NetLogo. http://ccl.northwestern.edu/netlogo/. Center for Connected Learning and Computer-Based Modeling, Northwestern University, Evanston, IL.
+* Wilensky, U. (1999). NetLogo. http://ccl.northwestern.edu/netlogo/. Center for Connected Learning and Computer-Based Modeling, Northwestern University, Evanston, IL."
+
+And I am Peter Dresslar:
+
+* Dresslar, P. (2025). Netlogo 1d-Life-Infinite model. https://github.com/peterdresslar/GOL-1d-nl
 
 ## COPYRIGHT AND LICENSE
 
-Copyright 1998 Uri Wilensky.
+Copyright 1998, 2025 Uri Wilensky and Peter Dresslar
 
 ![CC BY-NC-SA 3.0](http://ccl.northwestern.edu/images/creativecommons/byncsa.png)
 
@@ -722,7 +590,7 @@ This model was created as part of the project: CONNECTED MATHEMATICS: MAKING SEN
 
 This model was converted to NetLogo as part of the projects: PARTICIPATORY SIMULATIONS: NETWORK-BASED DESIGN FOR SYSTEMS LEARNING IN CLASSROOMS and/or INTEGRATED SIMULATION AND MODELING ENVIRONMENT. The project gratefully acknowledges the support of the National Science Foundation (REPP & ROLE programs) -- grant numbers REC #9814682 and REC-0126227. Converted from StarLogoT to NetLogo, 2001.
 
-<!-- 1998 2001 -->
+<!-- 1998 2025 -->
 @#$#@#$#@
 default
 true
@@ -1010,6 +878,61 @@ NetLogo 6.4.0
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
+<experiments>
+  <experiment name="base" repetitions="2" runMetricsEveryStep="true">
+    <setup>setup-random</setup>
+    <go>go</go>
+    <timeLimit steps="200"/>
+    <metric>count patches with [living?] / count patches</metric>
+    <enumeratedValueSet variable="initial-density">
+      <value value="33.33"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="wrap?">
+      <value value="true"/>
+      <value value="false"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="1DLifeDensityWideSweep (wrapping ON)" repetitions="20" runMetricsEveryStep="true">
+    <setup>setup-random</setup>
+    <go>go</go>
+    <timeLimit steps="200"/>
+    <metric>count patches with [living?] / count patches</metric>
+    <enumeratedValueSet variable="initial-density">
+      <value value="5"/>
+      <value value="15"/>
+      <value value="25"/>
+      <value value="35"/>
+      <value value="45"/>
+      <value value="55"/>
+      <value value="65"/>
+      <value value="75"/>
+      <value value="85"/>
+      <value value="95"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="wrap?">
+      <value value="true"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="1DLifeDensityWideSweep (wrapping OFF)" repetitions="20" runMetricsEveryStep="false">
+    <setup>setup-random</setup>
+    <go>go</go>
+    <enumeratedValueSet variable="initial-density">
+      <value value="5"/>
+      <value value="15"/>
+      <value value="25"/>
+      <value value="35"/>
+      <value value="45"/>
+      <value value="55"/>
+      <value value="65"/>
+      <value value="75"/>
+      <value value="85"/>
+      <value value="95"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="wrap?">
+      <value value="false"/>
+    </enumeratedValueSet>
+  </experiment>
+</experiments>
 @#$#@#$#@
 @#$#@#$#@
 default
