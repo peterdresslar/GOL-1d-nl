@@ -1040,6 +1040,9 @@ NetLogo 6.4.0
       <value value="true"/>
       <value value="false"/>
     </enumeratedValueSet>
+    <enumeratedValueSet variable="update-1d?">
+      <value value="false"/>
+    </enumeratedValueSet>
   </experiment>
   <experiment name="1D2DLifeDensityWideSweep (wrapping ON)" repetitions="20" runMetricsEveryStep="true">
     <setup>setup-random</setup>
@@ -1061,6 +1064,9 @@ NetLogo 6.4.0
     <enumeratedValueSet variable="wrap?">
       <value value="true"/>
     </enumeratedValueSet>
+    <enumeratedValueSet variable="update-1d?">
+      <value value="false"/>
+    </enumeratedValueSet>
   </experiment>
   <experiment name="1D2DLifeDensityWideSweep (wrapping OFF)" repetitions="20" runMetricsEveryStep="false">
     <setup>setup-random</setup>
@@ -1078,6 +1084,9 @@ NetLogo 6.4.0
       <value value="95"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="wrap?">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="update-1d?">
       <value value="false"/>
     </enumeratedValueSet>
   </experiment>
