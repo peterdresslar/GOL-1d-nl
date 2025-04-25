@@ -1,6 +1,17 @@
 ;; 1d-Life-Infinite.nlogo
 
-;; Hmmmmmmmmm
+;; In this model, we entirely focus on the 1 dimensional model and are indifferent to the 2d mapping.
+;; "Infinite" is refers to the lack of any bounding of a state array, though of course we can only compute on a finite
+;; grid in NetLogo.
+;; Our model updates deterministically from any starting state and lambda: note that we must have a starting state and
+;; note also that many starting states are boring.
+
+;; If we consider the model independent of any other dimensionality, we might see lambda as a frequency parameter. The rules are
+;; effectively "tuned" to lambda. Changing lambda while the model is running will cause durable patterns to change,
+;; and new patterns to emerge in a manner not entirely unlike the mechanism of resonance.
+
+;; We might also consider that the "known primitives" of game of life can be described here, in one dimension, using integer
+;; positions and lambda. The two setup-test procedures illustrate simple gliders that are examples of this.
 
 ;;;; HOUSEKEEPING
 
@@ -286,10 +297,10 @@ NIL
 1
 
 TEXTBOX
-122
-277
-281
-375
+119
+278
+278
+376
 When this button is down,\nyou can add or remove\ncells by holding down\nthe mouse button\nand \"drawing\". 
 11
 0.0
@@ -389,7 +400,7 @@ SLIDER
 98
 lambda
 lambda
-1
+2
 101
 11.0
 1
@@ -401,10 +412,10 @@ SWITCH
 10
 401
 111
-435
+434
 log-evals?
 log-evals?
-0
+1
 1
 -1000
 
@@ -425,18 +436,42 @@ NIL
 NIL
 1
 
+TEXTBOX
+122
+124
+288
+166
+Tests will move quickly: try setting sim speed to \"slower\"
+11
+0.0
+1
+
 @#$#@#$#@
 ## WHAT IS IT?
 
-This program is an example of a two-dimensional cellular automaton.  This particular cellular automaton is called The Game of Life.
+This program is an example of a one-dimensional cellular automaton (1D-CA or CA). This particular CA was built as a 1D conversion of the well-known and elegantly-designed "Life" NetLogo model, itself based upon Conwayʻs Game of Life. Herein, we will keep some of the comments from the base model, and designate them with a >"comment" format, like as follows:
 
-A cellular automaton is a computational machine that performs actions based on certain rules.  It can be thought of as a board which is divided into cells (such as square cells of a checkerboard).  Each cell can be either "alive" or "dead."  This is called the "state" of the cell.  According to specified rules, each cell will be alive or dead at the next time step.
+>"A cellular automaton is a computational machine that performs actions based on certain rules.  It can be thought of as a board which is divided into cells (such as square cells of a checkerboard).  Each cell can be either "alive" or "dead."  This is called the "state" of the cell.  According to specified rules, each cell will be alive or dead at the next time step."
+
+While the original version of Life operates on two dimensions, using the standard NetLogo cartesian coordinate system, this version has compressed the basic rules that govern Life into ones that can operate on a one-dimensional system. It turns out that the rules themselves, or, the actual predicate algebra (listed below) work precisely the same in 1, 2, or likely any N dimensions. However, the way we assess the state of the one-dimensional version in order to feed data *into* the rules differs. Specifically, GOL rules require inputs from neighboring cells to operate on any given cell, and with our altered dimensionality the definition of neighboring changes.
+
+In another version of this model, we demonstrate a simple method of mapping from a finite two dimensional-grid to a one-dimensional array, and then we demonstrate the conversion of the neighbors into a function that uses both the side length (n) and the squared size (N) of the 2D grid to yield algebra for conversion to the 1D model. However, it can be observed in that model that the 1D model, once set up in this fashion, operates entirely independently from the two-dimensional version. In other words, it should be possible to operate the 1D version in a manner that ignores any other dimensionality.
+
+For this implementation, we say that we operate indifferently to the 2D version of the CA. Through this indifference, our need for the mapping parameter N (the square of the grid) is lifted. However, we still need a mechanism to define "neighbors" in our rules. We do this by converting our "side length" into a simple adjustable parameter, "lambda."
+
+Lamba works as a frequency "tuner" for the implementation, controlling the "spaced-ness" of the patterns and their operation on each other. Lambda must be set at the integer 2 or higher in order for the rules to operate as expected.
+
+We call this model "infinite" as there is no effective limit on the state to the left or right of the model other than screen size. This is specifically distinct from the alternate version of the model where we map cells back to two dimensions: with that need comes the constraint of having specific state frames.
+
+For contrast, this model could be set to be as "wide" as technology will allow. By default the model is set to have "wrapping" off--in this way, when patterns "read" the edge of the screen they encounter inactive, "dead" neighbors and nothing else. With wrapping on, motion will take place across the boundary from left to right or vice-versa. 
 
 ## HOW IT WORKS
 
-The rules of the game are as follows.  Each cell checks the state of itself and its eight surrounding neighbors and then sets itself to either alive or dead.  If there are less than two alive neighbors, then the cell dies.  If there are more than three alive neighbors, the cell dies.  If there are 2 alive neighbors, the cell remains in the state it is in.  If there are exactly three alive neighbors, the cell becomes alive. This is done in parallel and continues forever.
+>"The rules of the game are as follows.  Each cell checks the state of itself and its eight surrounding neighbors and then sets itself to either alive or dead.  If there are less than two alive neighbors, then the cell dies.  If there are more than three alive neighbors, the cell dies.  If there are 2 alive neighbors, the cell remains in the state it is in.  If there are exactly three alive neighbors, the cell becomes alive. This is done in parallel and continues forever."
 
-There are certain recurring shapes in Life, for example, the "glider" and the "blinker". The glider is composed of 5 cells which form a small arrow-headed shape, like this:
+In this version of the model, again, the rules are exactly the same, except that the location of the neighbors is set using lambda.
+
+>"There are certain recurring shapes in Life, for example, the "glider" and the "blinker". The glider is composed of 5 cells which form a small arrow-headed shape, like this:
 
 ```text
    O
@@ -444,41 +479,39 @@ There are certain recurring shapes in Life, for example, the "glider" and the "b
   OOO
 ```
 
-This glider will wiggle across the world, retaining its shape.  A blinker is a block of three cells (either up and down or left and right) that rotates between horizontal and vertical orientations.
+This glider will wiggle across the world, retaining its shape.  A blinker is a block of three cells (either up and down or left and right) that rotates between horizontal and vertical orientations."
+
+In this version of the model, these patterns do still exist, and can persist and move across the world analogously to how they do in two dimensions. They may not look as apparent to the observer, but they are there.
 
 ## HOW TO USE IT
 
-The INITIAL-DENSITY slider determines the initial density of cells that are alive.  SETUP-RANDOM places these cells.  GO-FOREVER runs the rule forever.  GO-ONCE runs the rule once.
+>"The INITIAL-DENSITY slider determines the initial density of cells that are alive.  SETUP-RANDOM places these cells.  GO-FOREVER runs the rule forever.  GO-ONCE runs the rule once.
 
-If you want to draw your own pattern, use the DRAW-CELLS button and then use the mouse to "draw" and "erase" in the view.
+If you want to draw your own pattern, use the DRAW-CELLS button and then use the mouse to "draw" and "erase" in the view."
+
+These controls work the same in this version. Try zooming in if you are drawing cells.
+
+Also available are the SETUP-TEST and SETUP-ALT-TEST buttons, which each set up a few simple glider patterns that should work to process across the screen. An excellent way to understand what is going on is to adjust the LAMBDA slider a few times and try clicking and executing one of these SETUP-TEST buttons after doing so.
 
 ## THINGS TO NOTICE
 
-Find some objects that are alive, but motionless.
+> "Find some objects that are alive, but motionless.
 
-Is there a "critical density" - one at which all change and motion stops/eternal motion begins?
+Is there a "critical density" - one at which all change and motion stops/eternal motion begins?"
 
 ## THINGS TO TRY
 
-Are there any recurring shapes other than gliders and blinkers?
-
-Build some objects that don't die (using DRAW-CELLS)
-
-How much life can the board hold and still remain motionless and unchanging? (use DRAW-CELLS)
-
-The glider gun is a large conglomeration of cells that repeatedly spits out gliders.  Find a "glider gun" (very, very difficult!).
+Here we will point out that one of the best things to try is to run this version and the base "Life" version side by side and to compare results.
 
 ## EXTENDING THE MODEL
 
-Give some different rules to life and see what happens.
+We have extended the model already, thank you.
 
-Experiment with using neighbors4 instead of neighbors (see below).
+N-D?
 
 ## NETLOGO FEATURES
 
-The neighbors primitive returns the agentset of the patches to the north, south, east, west, northeast, northwest, southeast, and southwest.  So `count neighbors with [living?]` counts how many of those eight patches have the `living?` patch variable set to true.
-
-`neighbors4` is like `neighbors` but only uses the patches to the north, south, east, and west.  Some cellular automata, like this one, are defined using the 8-neighbors rule, others the 4-neighbors.
+Note that the grid is setup with the Settings... button. Changes may or may not work.
 
 ## RELATED MODELS
 
@@ -493,7 +526,7 @@ CA 1D Rule 250 --- the basic rule 250 model
 
 ## CREDITS AND REFERENCES
 
-The Game of Life was invented by John Horton Conway.
+>" The Game of Life was invented by John Horton Conway.
 
 See also:
 
@@ -507,11 +540,11 @@ Martin Gardner, "Mathematical Games: On cellular automata, self-reproduction, th
 
 Berlekamp, Conway, and Guy, Winning Ways for your Mathematical Plays, Academic Press: New York, 1982.
 
-William Poundstone, The Recursive Universe, William Morrow: New York, 1985.
+William Poundstone, The Recursive Universe, William Morrow: New York, 1985."
 
 ## HOW TO CITE
 
-If you mention this model or the NetLogo software in a publication, we ask that you include the citations below.
+> "If you mention this model or the NetLogo software in a publication, we ask that you include the citations below.
 
 For the model itself:
 
@@ -519,11 +552,15 @@ For the model itself:
 
 Please cite the NetLogo software as:
 
-* Wilensky, U. (1999). NetLogo. http://ccl.northwestern.edu/netlogo/. Center for Connected Learning and Computer-Based Modeling, Northwestern University, Evanston, IL.
+* Wilensky, U. (1999). NetLogo. http://ccl.northwestern.edu/netlogo/. Center for Connected Learning and Computer-Based Modeling, Northwestern University, Evanston, IL."
+
+And I am Peter Dresslar:
+
+* Dresslar, P. (2025). Netlogo 1d-Life-Infinite model. https://github.com/peterdresslar/GOL-1d-nl
 
 ## COPYRIGHT AND LICENSE
 
-Copyright 1998 Uri Wilensky.
+Copyright 1998, 2025 Uri Wilensky and Peter Dresslar
 
 ![CC BY-NC-SA 3.0](http://ccl.northwestern.edu/images/creativecommons/byncsa.png)
 
@@ -535,7 +572,7 @@ This model was created as part of the project: CONNECTED MATHEMATICS: MAKING SEN
 
 This model was converted to NetLogo as part of the projects: PARTICIPATORY SIMULATIONS: NETWORK-BASED DESIGN FOR SYSTEMS LEARNING IN CLASSROOMS and/or INTEGRATED SIMULATION AND MODELING ENVIRONMENT. The project gratefully acknowledges the support of the National Science Foundation (REPP & ROLE programs) -- grant numbers REC #9814682 and REC-0126227. Converted from StarLogoT to NetLogo, 2001.
 
-<!-- 1998 2001 -->
+<!-- 1998 2025 -->
 @#$#@#$#@
 default
 true
