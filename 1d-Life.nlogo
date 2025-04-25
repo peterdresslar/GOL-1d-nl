@@ -179,7 +179,7 @@ end
 GRAPHICS-WINDOW
 122
 31
-2132
+20532
 42
 -1
 -1
@@ -190,11 +190,11 @@ GRAPHICS-WINDOW
 1
 1
 0
-0
-0
+1
+1
 1
 0
-1000
+10200
 0
 0
 0
@@ -370,16 +370,6 @@ NIL
 1
 
 TEXTBOX
-2137
-30
-2287
-48
-<--processing in 1D
-11
-0.0
-1
-
-TEXTBOX
 1973
 238
 2123
@@ -445,10 +435,10 @@ NIL
 
 TEXTBOX
 122
-124
+119
 288
-166
-Tests will move quickly: try setting sim speed to \"slower\"
+161
+Tests will move quickly: try setting sim speed to \"slower.\" Get ready to scroll...
 11
 0.0
 1
@@ -463,6 +453,16 @@ wrap?
 0
 1
 -1000
+
+TEXTBOX
+9698
+174
+9848
+192
+this space needs an XKCD
+11
+0.0
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -912,10 +912,14 @@ NetLogo 6.4.0
     <enumeratedValueSet variable="wrap?">
       <value value="true"/>
     </enumeratedValueSet>
+    <enumeratedValueSet variable="lambda">
+      <value value="50"/>
+    </enumeratedValueSet>
   </experiment>
   <experiment name="1DLifeDensityWideSweep (wrapping OFF)" repetitions="20" runMetricsEveryStep="false">
     <setup>setup-random</setup>
     <go>go</go>
+    <timeLimit steps="200"/>
     <enumeratedValueSet variable="initial-density">
       <value value="5"/>
       <value value="15"/>
@@ -930,6 +934,9 @@ NetLogo 6.4.0
     </enumeratedValueSet>
     <enumeratedValueSet variable="wrap?">
       <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="lambda">
+      <value value="50"/>
     </enumeratedValueSet>
   </experiment>
 </experiments>
