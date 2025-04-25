@@ -446,7 +446,7 @@ Tests will move quickly: try setting sim speed to \"slower.\" Get ready to scrol
 SWITCH
 11
 365
-101
+112
 398
 wrap?
 wrap?
@@ -460,6 +460,16 @@ TEXTBOX
 9848
 192
 this space needs an XKCD
+11
+0.0
+1
+
+TEXTBOX
+20048
+51
+20546
+107
+The \"Life\" model has, by default, 10201 cells. And so, this 1-dimensional version does also.
 11
 0.0
 1
