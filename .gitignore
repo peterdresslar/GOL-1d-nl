@@ -11,3 +11,4 @@ wheels/
 
 # NetLogo
 netlogo-6.0.4/
+.*.nlogo
