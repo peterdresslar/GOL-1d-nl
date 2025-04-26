@@ -702,7 +702,7 @@ NetLogo 6.4.0
       <value value="true"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="2DLifeDensityWideSweep (wrapping OFF)" repetitions="20" runMetricsEveryStep="false">
+  <experiment name="2DLifeDensityWideSweep (wrapping OFF)" repetitions="20" runMetricsEveryStep="true">
     <setup>setup-random</setup>
     <go>go</go>
     <timeLimit steps="200"/>
