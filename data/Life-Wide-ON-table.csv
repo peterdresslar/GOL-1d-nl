@@ -4,7 +4,7 @@
 "04/25/2025 13:47:25:495 -1000"
 "min-pxcor","max-pxcor","min-pycor","max-pycor"
 "-50","50","-50","50"
-"[run number]","initial-density","wrap?","[step]","count patches with [living?] / count patches"
+"run","initial-density","wrap","step","density"
 "4","5","true","0","0.04626997353200667"
 "5","5","true","0","0.046760121556710124"
 "1","5","true","0","0.04519164787765905"

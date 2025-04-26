@@ -929,7 +929,7 @@ NetLogo 6.4.0
       <value value="50"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="1DLifeDensityWideSweep (wrapping OFF)" repetitions="20" runMetricsEveryStep="false">
+  <experiment name="1DLifeDensityWideSweep (wrapping OFF)" repetitions="20" runMetricsEveryStep="true">
     <setup>setup-random</setup>
     <go>go</go>
     <timeLimit steps="200"/>
