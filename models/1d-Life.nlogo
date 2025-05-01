@@ -1,4 +1,4 @@
-;; 1d-Life-Infinite.nlogo
+;; 1d-Life.nlogo
 
 ;; In this model, we entirely focus on the 1 dimensional model and are indifferent to the 2d mapping.
 ;; "Infinite" is refers to the lack of any bounding of a state array, though of course we can only compute on a finite
@@ -190,8 +190,8 @@ GRAPHICS-WINDOW
 1
 1
 0
-0
-0
+1
+1
 1
 0
 10200
@@ -236,10 +236,10 @@ NIL
 1
 
 BUTTON
-11
-196
-114
-231
+12
+234
+115
+269
 go-once
 go
 NIL
@@ -253,10 +253,10 @@ NIL
 0
 
 BUTTON
-11
-234
-114
+12
 272
+115
+310
 go-forever
 go
 T
@@ -304,20 +304,20 @@ NIL
 1
 
 TEXTBOX
-119
-278
-278
-376
+120
+316
+279
+414
 When this button is down,\nyou can add or remove\ncells by holding down\nthe mouse button\nand \"drawing\". 
 11
 0.0
 0
 
 BUTTON
-10
-278
-113
-313
+11
+316
+114
+351
 NIL
 draw-cells
 T
@@ -399,17 +399,17 @@ lambda
 lambda
 2
 101
-11.0
+47.0
 1
 1
 NIL
 HORIZONTAL
 
 SWITCH
-10
-401
-111
-434
+11
+439
+112
+472
 log-evals?
 log-evals?
 1
@@ -444,10 +444,10 @@ Tests will move quickly: try setting sim speed to \"slower.\" Get ready to scrol
 1
 
 SWITCH
-11
-365
-112
-398
+12
+403
+113
+436
 wrap?
 wrap?
 0
@@ -472,6 +472,23 @@ TEXTBOX
 The \"Life\" model has, by default, 10201 cells. And so, this 1-dimensional version does also.
 11
 0.0
+1
+
+BUTTON
+203
+209
+295
+242
+NIL
+load-tape
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
 1
 
 @#$#@#$#@
@@ -905,10 +922,10 @@ NetLogo 6.4.0
       <value value="50"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="1DLifeDensityWideSweep (wrapping ON)" repetitions="20" runMetricsEveryStep="true">
+  <experiment name="1DLifeDensityWideSweep (wrapping ON)" repetitions="50" runMetricsEveryStep="true">
     <setup>setup-random</setup>
     <go>go</go>
-    <timeLimit steps="200"/>
+    <timeLimit steps="500"/>
     <metric>count patches with [living?] / count patches</metric>
     <enumeratedValueSet variable="initial-density">
       <value value="5"/>
@@ -929,10 +946,10 @@ NetLogo 6.4.0
       <value value="50"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="1DLifeDensityWideSweep (wrapping OFF)" repetitions="20" runMetricsEveryStep="true">
+  <experiment name="1DLifeDensityWideSweep (wrapping OFF)" repetitions="50" runMetricsEveryStep="true">
     <setup>setup-random</setup>
     <go>go</go>
-    <timeLimit steps="200"/>
+    <timeLimit steps="500"/>
     <metric>count patches with [living?] / count patches</metric>
     <enumeratedValueSet variable="initial-density">
       <value value="5"/>
