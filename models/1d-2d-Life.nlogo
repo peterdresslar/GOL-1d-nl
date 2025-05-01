@@ -1,7 +1,13 @@
-;; 1d-Life.nlogo
+;; 1d-2d-Life.nlogo
 
-;; This model is a 1D implementation of Conway's Game of Life based on the 2D model "life.nlogo"
-;; by Uri Wilensky.
+; 1d-2d-Life.nlogo   – A one-dimensional implementation of Conway's Game of Life with 2D display.
+; Copyright © 1998, 2025  Uri Wilensky & Peter Dresslar
+;
+; Licensed under the Creative Commons
+; Attribution–NonCommercial–ShareAlike 3.0 Unported Licence
+; (CC BY-NC-SA 3.0)  https://creativecommons.org/licenses/by-nc-sa/3.0/
+;
+; New or modified procedures are tagged with “PD:”, "PDD:" or "Dresslar:" in their headers or comment blocks.
 
 ;; Due to constraints on state management specifically, this model is significantly rewritten.
 ;; Instead of storing state in the patches, we have to store it in a global data structure,
@@ -88,7 +94,7 @@ patches-own [
 to setup-blank
   clear-all
 
-  __change-topology wrap? wrap? ;;; control whether wrapping is on  NOT SURE THIS WILL WORK IN THIS MODEL
+  __change-topology wrap? wrap? ;;; PDD control whether wrapping is on  NOT SURE THIS WILL WORK IN THIS MODEL
 
 
   set lambda 101  ;; n
@@ -97,7 +103,7 @@ to setup-blank
 
   setup-border
 
-  ;; here we will convert the base model procedure to our terms; initalize the 1d state and then
+  ;; PDD here we will convert the base model procedure to our terms; initalize the 1d state and then
   ;; update 2d based on 1d statae
 
   set current-state []
@@ -113,7 +119,7 @@ to setup-blank
   update-1d-patches
   update-2d-patches
 
-  ;; set current density by summing current-state and dividing by lambda-squared
+  ;; PDD set current density by summing current-state and dividing by lambda-squared
   set current-density (sum current-state / lambda-squared)
 
   reset-ticks
@@ -124,7 +130,7 @@ end
 to setup-random
   clear-all
 
-  __change-topology wrap? wrap? ;;; control whether wrapping is on
+  __change-topology wrap? wrap? ;;; PDD control whether wrapping is on
 
 
   set lambda 101  ;; n
@@ -134,7 +140,7 @@ to setup-random
 
   setup-border
 
-  ;; here we will convert the base model procedure to our terms; initalize the 1d state and then
+  ;; PDD here we will convert the base model procedure to our terms; initalize the 1d state and then
   ;; update 2d based on 1d statae
 
   set current-state []
@@ -155,13 +161,13 @@ to setup-random
   update-1d-patches
   update-2d-patches
 
-  ;; set current density by summing current-state and dividing by lambda-squared
+  ;; PDD set current density by summing current-state and dividing by lambda-squared
   set current-density (sum current-state / lambda-squared)
 
   reset-ticks
 end
 
-to setup-test   ;;; just some arbitary gliders, this could be made more fun.
+to setup-test   ;;; PDD just some arbitary gliders, this could be made more fun.
   setup-blank
   let glider1 floor(lambda-squared / 2)
   let glider2 glider1 + lambda + 1
@@ -207,7 +213,7 @@ to setup-border
 end
 
 to map-patches
-  ;; -50, 50: current state pos[0]
+  ;; -PDD -50, 50: current state pos[0]
   ;; 50, 50: current state pos [lambda]
   ;; 0, 0: current state pos [(lambda * lambda / 2) + (lambda / 2) + 1]
   ;; -50, -50: current state pos [(lambda * lambda) - lambda]
@@ -234,7 +240,7 @@ to draw-cells  ;; From the old model, actually an input-setup function.
         ] [
           cell-birth
         ]
-        ;; ... now we have to map BACK to 1d
+        ;; PDD ... now we have to map BACK to 1d
         let idx mapping
         set current-state replace-item idx current-state (ifelse-value living? [1] [0])
       ]
@@ -246,16 +252,16 @@ to draw-cells  ;; From the old model, actually an input-setup function.
 end
 
 to update-1d-patches
-  ;; very different from the base model since
+  ;; PDD very different from the base model since
   ;; in that model, the patch status is the acutal state.
 
-  ;; here, we use current-state and the current-1d-position to update the 1D display
+  ;; PDD here, we use current-state and the current-1d-position to update the 1D display
   ;; we should display the most recent lambda of the 1D state based on the current-1d-position
 
   let bookmark (max list (current-1d-position - lambda) 0)
 
   let state-view sublist current-state bookmark current-1d-position
-  ;; we need to work entirely with the max pycor row
+  ;; PDD we need to work entirely with the max pycor row
 
   ;; for our pxcor values, we need to start on the negative side of the axis and work to the positive side.
   ;; the negative side is -1 * (floor(lambda / 2)
@@ -297,7 +303,7 @@ to cell-border ;;; not from anywhere
 end
 
 to go
-  ;; Process the next step in the 1D representation
+  ;; PDD Process the next step in the 1D representation
   ;; process-1d-step
   ;; itʻs a cosmetic issue, but we want the 1d row to scroll "forward" (left to right)
   ;; as we process each 1d cell.
@@ -321,16 +327,20 @@ to go
 end
 
 to-report evaluate
+  ;; PDD evaluate is the function that takes the current state and the previous state and returns the next state
+  ;; same rules as the base function. As noted above, the modulos are required in order to handle wrapping. This was quite an exercise to test.
+  ;; the numbers refer to our keypad style numbering of neighbors.
+
   let prev-neighbors
     (item ((current-1d-position - lambda - 1 + lambda-squared) mod lambda-squared) previous-state) +    ;; 7
     (item ((current-1d-position - lambda + lambda-squared) mod lambda-squared) previous-state) +        ;; 8
     (item ((current-1d-position - lambda + 1 + lambda-squared) mod lambda-squared) previous-state) +    ;; 9
-    (item ((current-1d-position - 1 + lambda-squared) mod lambda-squared) previous-state) +                ;; 4
-    (item ((current-1d-position + 1 + lambda-squared) mod lambda-squared) previous-state) +                ;; 6
+    (item ((current-1d-position - 1 + lambda-squared) mod lambda-squared) previous-state) +             ;; 4
+    (item ((current-1d-position + 1 + lambda-squared) mod lambda-squared) previous-state) +             ;; 6
     (item ((current-1d-position + lambda - 1 + lambda-squared) mod lambda-squared) previous-state) +    ;; 1
     (item ((current-1d-position + lambda + lambda-squared) mod lambda-squared) previous-state) +        ;; 2
     (item ((current-1d-position + lambda + 1 + lambda-squared) mod lambda-squared) previous-state)      ;; 3
-  let prev-self item current-1d-position previous-state                                                ;; 5
+  let prev-self item current-1d-position previous-state                                                 ;; 5
 
   ;; now apply the rules of GOL -- totally the same here as in 2D, just finding neighbors is different
   ifelse (prev-self = 1)
@@ -632,11 +642,15 @@ wrap?
 @#$#@#$#@
 ## WHAT IS IT?
 
-This program is an example of a two-dimensional cellular automaton.  This particular cellular automaton is called The Game of Life.
+This model is a one-dimensional implementation of Conway's Game of Life with a 2D display. As can be seen in the code comments, we achieve the operation of the 1D model by mapping starting state of the model from a 2D grid into current and previous state arrays.
+
+The model is based on the 2D model "life.nlogo" by Uri Wilensky.
 
 A cellular automaton is a computational machine that performs actions based on certain rules.  It can be thought of as a board which is divided into cells (such as square cells of a checkerboard).  Each cell can be either "alive" or "dead."  This is called the "state" of the cell.  According to specified rules, each cell will be alive or dead at the next time step.
 
 ## HOW IT WORKS
+
+The rules in this model are the same as the rules of the 2D model "life.nlogo" by Uri Wilensky.
 
 The rules of the game are as follows.  Each cell checks the state of itself and its eight surrounding neighbors and then sets itself to either alive or dead.  If there are less than two alive neighbors, then the cell dies.  If there are more than three alive neighbors, the cell dies.  If there are 2 alive neighbors, the cell remains in the state it is in.  If there are exactly three alive neighbors, the cell becomes alive. This is done in parallel and continues forever.
 
@@ -655,6 +669,13 @@ This glider will wiggle across the world, retaining its shape.  A blinker is a b
 The INITIAL-DENSITY slider determines the initial density of cells that are alive.  SETUP-RANDOM places these cells.  GO-FOREVER runs the rule forever.  GO-ONCE runs the rule once.
 
 If you want to draw your own pattern, use the DRAW-CELLS button and then use the mouse to "draw" and "erase" in the view.
+
+There are two additional switches to see in the modified version of this model:
+
+1. The "wrap?" switch toggles the wrapping of the 1D grid.
+2. The "update-1d?" switch toggles the 1D update. Turning the switch off will continue running only the 1D grid, but will aid in performance.
+
+There are also new setup options that specifically generate gliders.
 
 ## THINGS TO NOTICE
 

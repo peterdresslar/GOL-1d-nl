@@ -1,3 +1,14 @@
+; Life.nlogo   – A modified version of Uri Wilensky's "Life", a two-dimensional cellular automaton.
+; Copyright © 1998, 2025  Uri Wilensky & Peter Dresslar
+;
+; Licensed under the Creative Commons
+; Attribution–NonCommercial–ShareAlike 3.0 Unported Licence
+; (CC BY-NC-SA 3.0)  https://creativecommons.org/licenses/by-nc-sa/3.0/
+;
+; New or modified procedures are tagged with “PD:”, "PDD:" or "Dresslar:" in their headers or comment blocks.
+
+;; This version is specifically modified for testing and comparison with the 1d-Life.nlogo version.
+
 globals [
   erasing?        ;; is the current draw-cells mouse click erasing or adding?
 ]
@@ -275,6 +286,8 @@ wrap?
 This program is an example of a two-dimensional cellular automaton.  This particular cellular automaton is called The Game of Life.
 
 A cellular automaton is a computational machine that performs actions based on certain rules.  It can be thought of as a board which is divided into cells (such as square cells of a checkerboard).  Each cell can be either "alive" or "dead."  This is called the "state" of the cell.  According to specified rules, each cell will be alive or dead at the next time step.
+
+This model has been subtly modified to help test the 1d-Life.nlogo model, including a new switch for use in BehaviorSpace experiments.
 
 ## HOW IT WORKS
 

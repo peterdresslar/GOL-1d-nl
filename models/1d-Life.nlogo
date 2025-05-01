@@ -1,5 +1,14 @@
 ;; 1d-Life.nlogo
 
+; 1d-Life.nlogo   – A one-dimensional λ-parameterized derivative of Uri Wilensky’s "Life"
+; Copyright © 1998, 2025  Uri Wilensky & Peter Dresslar
+;
+; Licensed under the Creative Commons
+; Attribution–NonCommercial–ShareAlike 3.0 Unported Licence
+; (CC BY-NC-SA 3.0)  https://creativecommons.org/licenses/by-nc-sa/3.0/
+;
+; New or modified procedures are tagged with “PD:”, "PDD:" or "Dresslar:" in their headers or comment blocks.
+
 ;; In this model, we entirely focus on the 1 dimensional model and are indifferent to the 2d mapping.
 ;; "Infinite" is refers to the lack of any bounding of a state array, though of course we can only compute on a finite
 ;; grid in NetLogo.
@@ -11,12 +20,12 @@
 ;; and new patterns to emerge in a manner not entirely unlike the mechanism of resonance.
 
 ;; We might also consider that the "known primitives" of game of life can be described here, in one dimension, using integer
-;; positions and lambda. The two setup-test procedures illustrate simple gliders that are examples of this.
+;; positions and lambda. The two setup-test procedures illustrate simple gliders that are examples of this. 
 
 ;;;; HOUSEKEEPING
 
 globals [
-  erasing?     ;; 1d state of the grid, could get pretty big.
+  erasing? 
 ]
 
 patches-own [
@@ -42,7 +51,7 @@ end
 to setup-random
   clear-all
 
-  __change-topology wrap? wrap? ;;; control whether wrapping is on
+  __change-topology wrap? wrap? ;;; control whether wrapping is on PDD
 
   ask patches
     [ ifelse random-float 100.0 < initial-density
@@ -51,7 +60,7 @@ to setup-random
   reset-ticks
 end
 
-to setup-test   ;;; just some arbitary gliders, this could be made more fun.
+to setup-test   ;;; just some arbitary gliders, this could be made more fun. PDD
   setup-blank
 
   let glider1 patch 667 0
