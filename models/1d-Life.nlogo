@@ -20,12 +20,12 @@
 ;; and new patterns to emerge in a manner not entirely unlike the mechanism of resonance.
 
 ;; We might also consider that the "known primitives" of game of life can be described here, in one dimension, using integer
-;; positions and lambda. The two setup-test procedures illustrate simple gliders that are examples of this. 
+;; positions and lambda. The two setup-test procedures illustrate simple gliders that are examples of this.
 
 ;;;; HOUSEKEEPING
 
 globals [
-  erasing? 
+  erasing?
 ]
 
 patches-own [
@@ -199,8 +199,8 @@ GRAPHICS-WINDOW
 1
 1
 0
-1
-1
+0
+0
 1
 0
 10200
@@ -408,7 +408,7 @@ lambda
 lambda
 2
 101
-47.0
+10.0
 1
 1
 NIL
@@ -481,23 +481,6 @@ TEXTBOX
 The \"Life\" model has, by default, 10201 cells. And so, this 1-dimensional version does also.
 11
 0.0
-1
-
-BUTTON
-203
-209
-295
-242
-NIL
-load-tape
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
 1
 
 @#$#@#$#@
@@ -952,7 +935,7 @@ NetLogo 6.4.0
       <value value="true"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="lambda">
-      <value value="50"/>
+      <value value="10"/>
     </enumeratedValueSet>
   </experiment>
   <experiment name="1DLifeDensityWideSweep (wrapping OFF)" repetitions="50" runMetricsEveryStep="true">
@@ -976,7 +959,7 @@ NetLogo 6.4.0
       <value value="false"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="lambda">
-      <value value="50"/>
+      <value value="10"/>
     </enumeratedValueSet>
   </experiment>
 </experiments>
