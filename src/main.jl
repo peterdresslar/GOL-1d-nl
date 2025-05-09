@@ -100,7 +100,7 @@ function main()
 
     # initialize the file depending on the persist strategy and return a handle for streaming(?)
     if args.persist_strategy == 1 || args.persist_strategy == 2
-        handle = initialize_file(args.persist_strategy)
+        handle = initialize_file(args.persist_strategy, args.N, args.r, args.ρ₀, args.steps)
     end
 
     for t in 1:args.steps
@@ -109,7 +109,7 @@ function main()
             report_density_history(board, t)
         end
         if args.persist_strategy == 1 || args.persist_strategy == 2
-            stream_board(handle,board, args.persist_strategy)
+            stream_board(handle, board, args.persist_strategy)
         end
     end
     println("Number of final live cells: $(sum(board))")
