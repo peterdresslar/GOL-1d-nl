@@ -67,39 +67,55 @@ function init_reporting()
     global ρ_history = Float64[]
 end
 
+function initialize_file(persist_strategy::Int)
+    if persist_strategy == 1
+        return open("board.bin", "w")
+    end
+end
+
+function stream_board(handle::IO, board::BitVector, persist_strategy::Int)
+    if persist_strategy == 1
+        write(handle, board)
+    elseif persist_strategy == 2
+        write(handle, board)
+    end
+end
 
 # ───────────── argument handling (no defaults) ─────────────
 function usage()
     println("1-D Game of Life\n")
-    println("Usage: julia $PROGRAM_FILE <N> <r> <ρ₀> <steps> <stats_on>")
+    println("Usage: julia $PROGRAM_FILE <N> <r> <ρ₀> <steps> <persist_strategy> <stats_on>")
     println("  N      : integer > 0 (number of cells)")
     println("  r      : integer ≥ 2 (neighbourhood radius parameter)")
     println("  ρ₀     : float 0.0–1.0 (initial live density)")
     println("  steps  : integer > 0 (simulation duration)")
+    println("  persist_strategy : integer 0 or 1 or 2 (0 to not persist data, 1 to persist data as a grid of booleans, 2 to persist data as a list of lists of integers)")
     println("  stats_on : integer 0 or 1 (1 to print stats, 0 to not print stats)")
     exit(1) # Exit with an error code to signal failure
 end
 
 function parse_args(args::Vector{String})
-    if any(a -> a in ("-h", "--help"), args) || length(args) != 5
+    if any(a -> a in ("-h", "--help"), args) || length(args) != 6
         usage()  # usage() always exits
     end
-    
+
     try
         N     = parse(Int, args[1])
         r     = parse(Int, args[2])
         ρ₀    = parse(Float64, args[3]) 
         steps = parse(Int, args[4])
-        stats_on = parse(Int, args[5])
+        persist_strategy = parse(Int, args[5])
+        stats_on = parse(Int, args[6])
 
         # ---- validation ----
         if N ≤ 0; error("N must be > 0, got $N") end
         if r ≤ 1; error("r must be an integer ≥ 2, got $r") end
         if !(0.0 ≤ ρ₀ ≤ 1.0); error("ρ₀ must be between 0.0 and 1.0, got $ρ₀") end
         if steps ≤ 0; error("steps must be > 0, got $steps") end
+        if persist_strategy != 0 && persist_strategy != 1 && persist_strategy != 2; error("persist_strategy must be 0, 1, or 2, got $persist_strategy") end
         if stats_on != 0 && stats_on != 1; error("stats_on must be 0 or 1, got $stats_on") end
 
-        return (N=N, r=r, ρ₀=ρ₀, steps=steps, stats_on=stats_on) # NamedTuple
+        return (N=N, r=r, ρ₀=ρ₀, steps=steps, persist_strategy=persist_strategy, stats_on=stats_on) # NamedTuple
     catch e
         println("\nError parsing arguments: ", sprint(showerror, e))
         usage()  # usage() always exits
@@ -120,10 +136,15 @@ function main()
     board = init_board(args.N, args.ρ₀)
     tmp = similar(board)          # scratch buffer
 
+    # initialize the file depending on the persist strategy and return a handle for streaming(?)
+    handle = initialize_file(args.persist_strategy)
     for t in 1:args.steps
         step!(board, tmp, offsets)
         if args.stats_on == 1
             report_density_history(board, t)
+        end
+        if args.persist_strategy == 1 || args.persist_strategy == 2
+            stream_board(handle,board, args.persist_strategy)
         end
     end
     println("Number of final live cells: $(sum(board))")
