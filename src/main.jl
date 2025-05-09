@@ -81,10 +81,10 @@ function usage()
 end
 
 function parse_args(args::Vector{String})
-    if any(a -> a in ("-h", "--help"), args) || length(args) != 4
+    if any(a -> a in ("-h", "--help"), args) || length(args) != 5
         usage()  # usage() always exits
     end
-
+    
     try
         N     = parse(Int, args[1])
         r     = parse(Int, args[2])
@@ -97,13 +97,7 @@ function parse_args(args::Vector{String})
         if r ≤ 1; error("r must be an integer ≥ 2, got $r") end
         if !(0.0 ≤ ρ₀ ≤ 1.0); error("ρ₀ must be between 0.0 and 1.0, got $ρ₀") end
         if steps ≤ 0; error("steps must be > 0, got $steps") end
-
-        # stats_on is just a setting. set to 0 if not provided
-        if length(args) < 5 || args[5] == "0" || args[5] == "false"
-            stats_on = 0
-        else
-            stats_on = 1
-        end
+        if stats_on != 0 && stats_on != 1; error("stats_on must be 0 or 1, got $stats_on") end
 
         return (N=N, r=r, ρ₀=ρ₀, steps=steps, stats_on=stats_on) # NamedTuple
     catch e
