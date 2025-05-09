@@ -12,3 +12,9 @@ wheels/
 # NetLogo
 netlogo-6.0.4/
 .*.nlogo
+
+
+# macos
+.DS_Store
+
+data/gol_N*
