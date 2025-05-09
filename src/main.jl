@@ -1,32 +1,7 @@
 # main.jl
 using Statistics
-
-# ───────────── initialization ─────────────
-get_offsets(r::Int)::NTuple{8, Int} = (-r - 1, -r, -r + 1, -1, 1, r - 1, r, r + 1)   # offsets that map neighborhood τᵣ for any location s as definied by r
-
-init_board(N::Int, ρ::Float64)::BitVector = rand(N) .< ρ             # a function that initializes a board of size N with a given density ρ
-
-
-# ───────────── intra-step operations ─────────────
-
-@inline live_neighbors(b::BitVector, s::Int, offsets::NTuple{8, Int})::UInt8 =     # an inline function that counts the number of live neighbors of a cell
-    count(offset -> begin                   # iterate over the eight offsets with a lambda function
-            x = s + offset                  # absolute index of the neighbour, x, a point in neighborhood τᵣ
-            1 ≤ x ≤ length(b) && b[x]       # inside the board *and* alive?
-        end,                                # lambda function ends here
-        offsets)                            # neighborhood "addresses"
-
-# ───────────── step ─────────────
-
-function step!(b::BitVector, tmp::BitVector, offsets::NTuple{8, Int})::BitVector
-    @inbounds for s in eachindex(b)
-        n = live_neighbors(b, s, offsets)
-        tmp[s] = (n == 3) | (b[s] & (n == 2))
-    end
-    copyto!(b, tmp)            # overwrite in-place
-    return b
-end
-
+include("life-1d.jl")
+include("utils.jl")
 
 # ───────────── reporting ─────────────
 function report_density_history(b::BitVector, t::Int)::Float64
@@ -67,19 +42,6 @@ function init_reporting()
     global ρ_history = Float64[]
 end
 
-function initialize_file(persist_strategy::Int)
-    if persist_strategy == 1
-        return open("board.bin", "w")
-    end
-end
-
-function stream_board(handle::IO, board::BitVector, persist_strategy::Int)
-    if persist_strategy == 1
-        write(handle, board)
-    elseif persist_strategy == 2
-        write(handle, board)
-    end
-end
 
 # ───────────── argument handling (no defaults) ─────────────
 function usage()
@@ -137,7 +99,10 @@ function main()
     tmp = similar(board)          # scratch buffer
 
     # initialize the file depending on the persist strategy and return a handle for streaming(?)
-    handle = initialize_file(args.persist_strategy)
+    if args.persist_strategy == 1 || args.persist_strategy == 2
+        handle = initialize_file(args.persist_strategy)
+    end
+
     for t in 1:args.steps
         step!(board, tmp, offsets)
         if args.stats_on == 1
