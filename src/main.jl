@@ -31,7 +31,7 @@ function parse_args(args::Vector{String})
 
         # ---- validation ----
         if N ≤ 0; error("N must be > 0, got $N") end
-        if r ≤ 1; error("r must be an integer ≥ 2, got $r") end
+        if r ≤ 2; error("r must be an integer > 2, got $r") end
         if !(0.0 ≤ ρ₀ ≤ 1.0); error("ρ₀ must be between 0.0 and 1.0, got $ρ₀") end
         if steps ≤ 0; error("steps must be > 0, got $steps") end
         if persist_strategy != 0 && persist_strategy != 1 && persist_strategy != 2; error("persist_strategy must be 0, 1, or 2, got $persist_strategy") end
