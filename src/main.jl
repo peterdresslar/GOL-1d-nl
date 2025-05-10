@@ -8,12 +8,12 @@ function usage()
     println("1-D Game of Life\n")
     println("Usage: julia $PROGRAM_FILE <N> <r> <ρ₀> <steps> <persist_strategy> <stats_on>")
     println("  N      : integer > 0 (number of cells)")
-    println("  r      : integer ≥ 2 (neighbourhood radius parameter)")
+    println("  r      : integer > 2 (neighbourhood radius parameter)")
     println("  ρ₀     : float 0.0–1.0 (initial live density)")
     println("  steps  : integer > 0 (simulation duration)")
     println("  persist_strategy : integer 0 or 1 or 2 (0 to not persist data, 1 to persist data as a grid of booleans, 2 to persist data as a list of lists of integers)")
     println("  stats_on : integer 0 or 1 (1 to print stats, 0 to not print stats)")
-    exit(1) # Exit with an error code to signal failure
+    exit(1)
 end
 
 function parse_args(args::Vector{String})
@@ -79,7 +79,6 @@ function main()
 
 end
 
-# Add this to run main when the script is executed
 if abspath(PROGRAM_FILE) == @__FILE__
     main()
 end

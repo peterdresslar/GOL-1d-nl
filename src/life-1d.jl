@@ -1,5 +1,5 @@
 # ───────────── initialization ─────────────
-"""Get the offsets that map neighborhood τᵣ for any location s as defined by r"""
+"""Get the offsets that map neighborhood τᵣ for any location s as defined by r. Assumes r > 2."""
 get_offsets(r::Int)::NTuple{8, Int} = (-r - 1, -r, -r + 1, -1, 1, r - 1, r, r + 1)   
 
 """Initialize a board of size N with a given density ρ"""
