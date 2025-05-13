@@ -55,7 +55,7 @@ function main()
 
     offsets = get_offsets(args.r)
 
-    board = init_board(args.N, args.ρ₀)
+    board = init_board_random(args.N, args.ρ₀)
     tmp = similar(board)          # scratch buffer
 
     # initialize the file depending on the persist strategy and return a handle for streaming(?)
