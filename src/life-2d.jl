@@ -3,16 +3,16 @@
 """
 2-D Game of Life. For research / comparison purposes.
 """
-get_offsets_2d(n::Int) = Int[
+get_offsets_2d(n::Int)::NTuple{8, Int} = (
     -n-1, -n, -n+1,
     -1,        +1,
     +n-1, +n, +n+1
-]
+)
 
 # ───────────── initialization ─────────────
 
 """Initialize a board of size n*n with a given density ρ"""
-init_2d_board_random(n::Int, ρ::Float64)::BitMatrix = rand(n, n) .< ρ          
+init_2d_board_random(n::Int, ρ::Float64)::BitMatrix = rand(n, n) .< ρ  
 
 # ───────────── intra-step operations ─────────────
 """
