@@ -48,7 +48,7 @@ Note that this function does not wrap.
         s += b[x]
     end
     return s
-
+end
 
 
 # ───────────── step ─────────────
