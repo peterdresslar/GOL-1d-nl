@@ -3,6 +3,11 @@
 """
 2-D Game of Life. For research / comparison purposes.
 """
+get_offsets_2d(n::Int) = Int[
+    -n-1, -n, -n+1,
+    -1,        +1,
+    +n-1, +n, +n+1
+]
 
 # ───────────── initialization ─────────────
 
@@ -14,20 +19,45 @@ init_2d_board_random(n::Int, ρ::Float64)::BitMatrix = rand(n, n) .< ρ
 An inline function that counts the number of live neighbors of a cell, by counting all x with true in neighborhood τᵣ
 Note that this function does not wrap.
 """
-@inline live_neighbors(b::Array{Bool, 2}, s::Tuple{Int, Int}, offsets::NTuple{8, Int})::UInt8 =     
-    count(offset -> begin                   # iterate over the eight offsets with a lambda function
-            x = s + offset                  # absolute index of the neighbour, x, a point in neighborhood τᵣ
-            1 ≤ x ≤ length(b) && b[x]       # inside the board *and* alive? off-board cells are all calculated as dead here.
-        end,                                # lambda function ends here
-        offsets)                            # neighborhood "addresses"
+
+@inline function live_2d_neighbors(b::BitMatrix, i::Int, offsets::NTuple{8,Int}, torus::Bool)::UInt8
+    rows, cols = size(b)   # both = n
+    s = UInt8(0)
+
+    # precompute row/col of centre cell
+    r0 = (i-1) % rows + 1         # row index (because column-major)
+    c0 = (i-1) ÷ rows + 1         # col index
+
+    @inbounds for o in offsets
+        x = i + o                 # candidate linear index
+
+        if torus
+            # wrap row & col separately
+            r = (r0 + (o % rows))          # delta row = o mod rows
+            c = (c0 + (o ÷ rows))
+
+            r = (r - 1) % rows + 1
+            c = (c - 1) % cols + 1
+            x = r + (c-1)*rows            # back to linear
+        end
+
+        if !(1 ≤ x ≤ length(b))
+            continue                      # off-board, skip (same as adding 0)
+        end
+
+        s += b[x]
+    end
+    return s
+
+
 
 # ───────────── step ─────────────
 """
 A function that performs a single step of the Game of Life. Since it passes the offsets it is 1-D specific; otherwise it would be indifferent to the dimension.
 """
-function step!(b::BitVector, tmp::BitVector, offsets::NTuple{8, Int})::BitVector
+function step_2d!(b::BitMatrix, tmp::BitMatrix, offsets::NTuple{8, Int}, torus::Bool)::BitMatrix
     @inbounds for s in eachindex(b)
-        n = live_neighbors(b, s, offsets)
+        n = live_2d_neighbors(b, s, offsets, torus)
         tmp[s] = (n == 3) | (b[s] & (n == 2))   # true if n == 3 or n == 2 and the cell is alive
     end
     copyto!(b, tmp)                             # overwrite in-place

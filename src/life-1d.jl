@@ -5,7 +5,7 @@
 get_offsets(r::Int)::NTuple{8, Int} = (-r - 1, -r, -r + 1, -1, 1, r - 1, r, r + 1)   
 
 """Initialize a board of size N with a given density ρ"""
-init_board_random(N::Int, ρ::Float64)::BitVector = rand(N) .< ρ                            
+init_1d_board_random(N::Int, ρ::Float64)::BitVector = rand(N) .< ρ                            
 
 # paste_left_right(definition::Vector(Tuple(Int, Int)), origin::Int, r::Int, board::BitVector)::BitVector
 # this function will add in a primitive (spaceship or other) to the board at the origin
